@@ -311,7 +311,7 @@ export default function MapPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface pt-24 pb-12 flex flex-col">
+    <div className="min-h-screen bg-background pt-24 pb-12 flex flex-col">
       <NavigationBar />
 
       <div className="container-main flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -404,7 +404,7 @@ export default function MapPage() {
                           className={`p-3 rounded-xl border text-left transition-all ${
                             ambulanceType === t.id 
                               ? 'border-medical bg-surface-blue text-medical' 
-                              : 'border-border bg-white text-text-secondary hover:bg-surface'
+                              : 'border-border bg-background text-text-secondary hover:bg-surface'
                           }`}
                         >
                           <div className="text-sm font-bold">{t.label}</div>
@@ -545,7 +545,7 @@ export default function MapPage() {
         <div className="lg:col-span-2 flex flex-col gap-6">
           
           {/* Map Container */}
-          <div className="rounded-2xl h-[350px] relative border border-border shadow-sm overflow-hidden z-0 bg-white">
+          <div className="rounded-2xl h-[350px] relative border border-border shadow-sm overflow-hidden z-0 bg-background">
             <div ref={mapRef} className="w-full h-full" />
             <div className="absolute top-4 left-4 z-[1000] flex gap-2">
               <div className="card-float px-4 py-2 text-xs font-semibold text-text-primary flex items-center gap-1.5">

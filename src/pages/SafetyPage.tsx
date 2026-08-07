@@ -5,9 +5,9 @@ import Navigation from '@/components/Navigation';
 import Footer from '@/components/landing/Footer';
 
 const emergencyTips = [
-  { icon: Phone, title: 'Call 911 First', desc: 'In any life-threatening emergency, call 911 before doing anything else. ResQ is a guide, not a replacement.', color: 'text-emergency', bg: 'bg-emergency-soft' },
+  { icon: Phone, title: 'Call 112 First', desc: 'In any life-threatening emergency, call 112 before doing anything else. ResQ is a guide, not a replacement.', color: 'text-emergency', bg: 'bg-emergency-soft' },
   { icon: Heart, title: 'Know CPR', desc: 'Hands-only CPR: push hard and fast in the center of the chest at 100-120 beats per minute until help arrives.', color: 'text-emergency', bg: 'bg-emergency-soft' },
-  { icon: Brain, title: 'Recognize Stroke (FAST)', desc: 'Face drooping, Arm weakness, Speech difficulty, Time to call 911. Every minute matters.', color: 'text-emergency', bg: 'bg-emergency-soft' },
+  { icon: Brain, title: 'Recognize Stroke (FAST)', desc: 'Face drooping, Arm weakness, Speech difficulty, Time to call 112. Every minute matters.', color: 'text-emergency', bg: 'bg-emergency-soft' },
   { icon: Wind, title: 'Choking: Heimlich', desc: '5 back blows, then 5 abdominal thrusts. Repeat until the object is expelled or the person goes limp.', color: 'text-urgent', bg: 'bg-amber-50' },
   { icon: Droplet, title: 'Stop Bleeding', desc: 'Apply firm, direct pressure with a clean cloth. Don\u2019t lift to check — add layers if blood soaks through.', color: 'text-emergency', bg: 'bg-emergency-soft' },
   { icon: Flame, title: 'Cool Burns', desc: 'Run cool (not cold) water over the burn for 20 minutes. Never use ice, butter, or ointments.', color: 'text-urgent', bg: 'bg-amber-50' },
@@ -25,7 +25,7 @@ const kitItems = [
 
 export default function SafetyPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <Navigation />
 
       {/* Hero */}
@@ -46,7 +46,7 @@ export default function SafetyPage() {
       </section>
 
       {/* Emergency tips */}
-      <section className="section-padding-normal bg-white">
+      <section className="section-padding-normal bg-background">
         <div className="container-main">
           <div className="text-center mb-16">
             <h2 className="heading-section mb-4">Essential emergency tips</h2>
@@ -103,13 +103,13 @@ export default function SafetyPage() {
       </section>
 
       {/* Important numbers */}
-      <section className="section-padding-normal bg-white">
+      <section className="section-padding-normal bg-background">
         <div className="container-main max-w-3xl text-center">
           <h2 className="heading-section mb-4">Save these numbers</h2>
           <p className="body-text mb-12 max-w-lg mx-auto">Add these to your phone\u2019s contacts today.</p>
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { name: 'Emergency', number: '911', desc: 'Fire, Police, Ambulance' },
+              { name: 'Emergency', number: '112', desc: 'Fire, Police, Ambulance' },
               { name: 'Poison Control', number: '1-800-222-1222', desc: '24/7 poison emergency' },
               { name: 'Crisis Line', number: '988', desc: 'Mental health crisis' },
             ].map((contact) => (

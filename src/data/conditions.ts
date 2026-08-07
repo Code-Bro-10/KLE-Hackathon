@@ -8,7 +8,7 @@ export const conditions: Condition[] = [
     confidence: 92,
     description: 'Symptoms suggest a possible heart attack or cardiac event requiring immediate medical attention.',
     recommendedActions: [
-      'Call 911 or emergency services immediately',
+      'Call 112 or emergency services immediately',
       'Keep the person calm and seated',
       'If prescribed, help them take nitroglycerin',
       'Prepare aspirin (325mg) if not allergic',
@@ -35,7 +35,7 @@ export const conditions: Condition[] = [
     confidence: 89,
     description: 'Signs indicate a possible stroke. Time is critical — every minute matters.',
     recommendedActions: [
-      'Call 911 immediately — note the time symptoms started',
+      'Call 112 immediately — note the time symptoms started',
       'Do NOT give food, drink, or medication',
       'Keep the person lying down with head slightly elevated',
       'Note symptom onset time for emergency staff',
@@ -62,7 +62,7 @@ export const conditions: Condition[] = [
     description: 'Severe allergic reaction. Epinephrine must be administered immediately.',
     recommendedActions: [
       'Administer EpiPen if available (outer thigh)',
-      'Call 911 immediately',
+      'Call 112 immediately',
       'Lay the person flat, elevate legs',
       'Be ready to perform CPR if needed',
       'A second dose may be needed if no improvement in 5-15 min',
@@ -88,7 +88,7 @@ export const conditions: Condition[] = [
     confidence: 91,
     description: 'Significant blood loss detected. Apply immediate pressure and seek emergency care.',
     recommendedActions: [
-      'Call 911 for heavy or uncontrolled bleeding',
+      'Call 112 for heavy or uncontrolled bleeding',
       'Apply firm direct pressure with a clean cloth',
       'Elevate the wound above heart level if possible',
       'Do not remove embedded objects',
@@ -116,7 +116,7 @@ export const conditions: Condition[] = [
       'Ask "Are you choking?" — if yes, act immediately',
       'Perform 5 back blows between shoulder blades',
       'Perform 5 abdominal thrusts (Heimlich)',
-      'Call 911 if the object is not dislodged',
+      'Call 112 if the object is not dislodged',
       'Begin CPR if the person becomes unconscious',
     ],
     firstAid: [
@@ -124,7 +124,7 @@ export const conditions: Condition[] = [
       'Make a fist, place thumb-side above the navel',
       'Give 5 quick, upward abdominal thrusts',
       'Alternate 5 back blows and 5 abdominal thrusts',
-      'If they become unconscious, start CPR and call 911',
+      'If they become unconscious, start CPR and call 112',
     ],
     warnings: [
       'Do NOT perform abdominal thrusts on infants under 1 year',
@@ -139,7 +139,7 @@ export const conditions: Condition[] = [
     confidence: 84,
     description: 'Significant burn injury. Cool the burn and assess severity.',
     recommendedActions: [
-      'Call 911 for large, deep, or facial burns',
+      'Call 112 for large, deep, or facial burns',
       'Cool the burn with cool running water for 20 minutes',
       'Remove jewelry/tight clothing near the burn before swelling',
       'Cover loosely with clean, non-fluffy cloth',
@@ -164,7 +164,7 @@ export const conditions: Condition[] = [
     confidence: 80,
     description: 'Symptoms suggest a bone fracture. Immobilize and seek medical care.',
     recommendedActions: [
-      'Call 911 if the bone is visible or the limb is deformed',
+      'Call 112 if the bone is visible or the limb is deformed',
       'Do not move the injured area',
       'Immobilize with a splint if trained',
       'Apply ice wrapped in cloth to reduce swelling',
@@ -189,7 +189,7 @@ export const conditions: Condition[] = [
     confidence: 78,
     description: 'Active or recent seizure. Protect the person and time the episode.',
     recommendedActions: [
-      'Call 911 if the seizure lasts over 5 minutes',
+      'Call 112 if the seizure lasts over 5 minutes',
       'Clear the area of hard or sharp objects',
       'Do not restrain the person',
       'Time the seizure duration',
@@ -216,14 +216,14 @@ export const conditions: Condition[] = [
     recommendedActions: [
       'Help the person sit upright and stay calm',
       'Help them use their reliever inhaler (blue)',
-      'Call 911 if no improvement after repeated doses',
+      'Call 112 if no improvement after repeated doses',
       'Monitor breathing continuously',
     ],
     firstAid: [
       'Sit the person upright — do not let them lie down',
       'Help them take their reliever inhaler (1 puff every 30-60 sec, up to 10)',
       'Stay calm and reassure them',
-      'If no improvement or worsening, call 911',
+      'If no improvement or worsening, call 112',
       'Keep them upright until breathing normalizes',
     ],
     warnings: [
@@ -302,7 +302,7 @@ export const conditions: Condition[] = [
       'Change the dressing daily and keep it dry',
     ],
     warnings: [
-      'Seek care if the wound is deep or won\u2019t stop bleeding',
+      'Seek care if the wound is deep or won’t stop bleeding',
       'Watch for infection signs: redness, swelling, pus',
       'Get a tetanus booster if it has been over 5 years',
     ],
@@ -361,14 +361,14 @@ export const conditions: Condition[] = [
 
 export const symptomKeywords: Record<string, string[]> = {
   cardiac: ['chest pain', 'chest pressure', 'heart', 'cardiac', 'left arm pain', 'shortness of breath chest', 'crushing chest', 'tight chest', 'chest tightness', 'radiating pain arm', 'palpitations chest pain'],
-  stroke: ['stroke', 'face drooping', 'slurred speech', 'weakness one side', 'numbness face', 'can\u2019t speak', 'sudden confusion', 'vision loss sudden', 'face numb'],
-  anaphylaxis: ['anaphylaxis', 'severe allergic', 'throat closing', 'swelling throat', 'epipen', 'bee sting swelling', 'swollen throat', 'can\u2019t breathe allergic', 'hives swelling'],
-  'severe-bleeding': ['severe bleeding', 'heavy bleeding', 'blood loss', 'deep cut bleeding', 'won\u2019t stop bleeding', 'arterial bleeding', 'profuse bleeding', 'laceration bleeding'],
-  choking: ['choking', 'can\u2019t breathe', 'object stuck throat', 'airway blocked', ' Heimlich', 'coughing can\u2019t breathe', 'gagging can\u2019t breathe'],
+  stroke: ['stroke', 'face drooping', 'slurred speech', 'weakness one side', 'numbness face', 'can’t speak', 'sudden confusion', 'vision loss sudden', 'face numb'],
+  anaphylaxis: ['anaphylaxis', 'severe allergic', 'throat closing', 'swelling throat', 'epipen', 'bee sting swelling', 'swollen throat', 'can’t breathe allergic', 'hives swelling'],
+  'severe-bleeding': ['severe bleeding', 'heavy bleeding', 'blood loss', 'deep cut bleeding', 'won’t stop bleeding', 'arterial bleeding', 'profuse bleeding', 'laceration bleeding'],
+  choking: ['choking', 'can’t breathe', 'object stuck throat', 'airway blocked', ' Heimlich', 'coughing can’t breathe', 'gagging can’t breathe'],
   burns: ['burn', 'scald', 'fire injury', 'hot water burn', 'severe burn', 'blistering burn', 'chemical burn', 'skin burn'],
-  fracture: ['fracture', 'broken bone', 'bone sticking out', 'deformed limb', 'can\u2019t move arm', 'can\u2019t move leg', 'snapped bone', 'fall bone pain'],
+  fracture: ['fracture', 'broken bone', 'bone sticking out', 'deformed limb', 'can’t move arm', 'can’t move leg', 'snapped bone', 'fall bone pain'],
   seizure: ['seizure', 'convulsion', 'shaking uncontrollably', 'fit', 'loss of consciousness shaking', 'eyes rolled back', 'jerking'],
-  asthma: ['asthma', 'wheezing', 'inhaler', 'can\u2019t breathe asthma', 'breathing difficulty', 'tight chest wheeze', 'shortness of breath wheeze'],
+  asthma: ['asthma', 'wheezing', 'inhaler', 'can’t breathe asthma', 'breathing difficulty', 'tight chest wheeze', 'shortness of breath wheeze'],
   fever: ['fever', 'high temperature', 'hot forehead', 'chills', 'sweating temperature', 'feverish', 'burning up'],
   'allergic-mild': ['rash', 'hives', 'itching', 'mild allergic', 'skin reaction', 'red bumps', 'sneezing itchy eyes'],
   'minor-cut': ['cut', 'scrape', 'minor wound', 'small cut', 'scratch', 'abrasion', 'minor bleed'],

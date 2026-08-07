@@ -21,7 +21,7 @@ const values = [
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <Navigation />
 
       {/* Hero */}
@@ -42,7 +42,7 @@ export default function AboutPage() {
       </section>
 
       {/* Mission */}
-      <section className="section-padding-normal bg-white">
+      <section className="section-padding-normal bg-background">
         <div className="container-main max-w-3xl text-center">
           <h2 className="heading-section mb-6">Our Mission</h2>
           <p className="text-xl text-text-secondary leading-relaxed">
@@ -110,7 +110,7 @@ export default function AboutPage() {
       </section>
 
       {/* CTA */}
-      <section className="section-padding-normal bg-white">
+      <section className="section-padding-normal bg-background">
         <div className="container-main text-center">
           <h2 className="heading-section mb-4">Ready to feel prepared?</h2>
           <p className="body-text max-w-lg mx-auto mb-8">Try ResQ now — no signup required.</p>

@@ -100,7 +100,7 @@ export default function HospitalDashboard() {
                       {h.erStatus === 'open' ? 'Open' : h.erStatus === 'limited' ? 'Limited' : 'Full'}
                     </span>
                   </div>
-                  <div className="h-2 rounded-full bg-white overflow-hidden mb-2">
+                  <div className="h-2 rounded-full bg-background overflow-hidden mb-2">
                     <div
                       className={`h-full rounded-full ${pct > 40 ? 'bg-stable' : pct > 15 ? 'bg-urgent' : 'bg-emergency'}`}
                       style={{ width: `${pct}%` }}

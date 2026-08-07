@@ -31,16 +31,20 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold mb-4">Emergency</h4>
             <ul className="space-y-3 text-white/60">
-              <li className="flex items-center gap-2"><Phone className="w-4 h-4" /> 911</li>
+              <li className="flex items-center gap-2">
+                <a href="tel:112" className="hover:text-white transition-colors flex items-center gap-2">
+                  <Phone className="w-4 h-4" /> 112 (National Emergency Helpline)
+                </a>
+              </li>
               <li className="flex items-center gap-2"><Mail className="w-4 h-4" /> support@resq.app</li>
-              <li className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Springfield, USA</li>
+              <li className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Belgaum, Karnataka, India</li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-white/40 text-sm">
-            ResQ is a guide, not a replacement for professional medical care. Always call 911 in a real emergency.
+            ResQ is a guide, not a replacement for professional medical care. Always call 112 in a real emergency.
           </p>
           <p className="text-white/40 text-sm">© 2024 ResQ AI. All rights reserved.</p>
         </div>

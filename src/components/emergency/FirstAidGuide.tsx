@@ -48,7 +48,7 @@ export default function FirstAidGuide({ condition }: Props) {
         <div className="mt-6 p-4 rounded-2xl bg-blue-50 flex gap-3">
           <ShieldCheck className="w-5 h-5 text-medical flex-shrink-0 mt-0.5" />
           <p className="text-sm text-text-secondary">
-            These steps are a guide. If symptoms worsen or don\u2019t improve, call 911 or go to the nearest ER immediately.
+            These steps are a guide. If symptoms worsen or don’t improve, call 112 or go to the nearest ER immediately.
           </p>
         </div>
 

@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, TrendingUp, ShieldCheck, Phone, ShieldAlert, Activity, Heart, Thermometer, Droplets } from 'lucide-react';
+import { AlertTriangle, TrendingUp, ShieldCheck, Phone, ShieldAlert, Activity, Heart, Thermometer, Droplets, ShoppingBag, ExternalLink } from 'lucide-react';
 import type { Condition } from '@/types';
 import { useStore } from '@/store/StoreContext';
 
@@ -58,6 +59,34 @@ export default function EmergencyCard({ condition, caseId, onFindHospital }: Pro
     });
     onFindHospital();
   };
+
+  const recommendedSupplies = useMemo(() => {
+    const suppliesList: string[] = [];
+    const textToScan = (condition.firstAid.join(' ') + ' ' + condition.recommendedActions.join(' ') + ' ' + condition.name).toLowerCase();
+
+    if (textToScan.includes('gauze') || textToScan.includes('bandage') || textToScan.includes('dress') || textToScan.includes('wound') || textToScan.includes('cut') || textToScan.includes('bleed')) {
+      suppliesList.push('Sterile Gauze');
+      suppliesList.push('Adhesive Bandages');
+    }
+    if (textToScan.includes('clean') || textToScan.includes('wash') || textToScan.includes('antiseptic') || textToScan.includes('disinfect') || textToScan.includes('infection')) {
+      if (!suppliesList.includes('Antiseptic Solution')) {
+        suppliesList.push('Antiseptic Solution');
+      }
+    }
+    if (textToScan.includes('pain') || textToScan.includes('fever') || textToScan.includes('aspirin') || textToScan.includes('medication') || textToScan.includes('chest') || textToScan.includes('headache')) {
+      suppliesList.push('Paracetamol 650');
+    }
+    if (textToScan.includes('burn') || textToScan.includes('scald') || textToScan.includes('ointment') || textToScan.includes('cream')) {
+      suppliesList.push('Burn Ointment');
+    }
+
+    // Default fallback list if no keywords found
+    if (suppliesList.length === 0) {
+      suppliesList.push('Paracetamol 650', 'Sterile Gauze', 'Adhesive Bandages');
+    }
+
+    return suppliesList;
+  }, [condition]);
 
   return (
     <motion.div
@@ -126,7 +155,7 @@ export default function EmergencyCard({ condition, caseId, onFindHospital }: Pro
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             {/* Heart Rate */}
-            <div className="p-3 bg-white rounded-xl border border-border/60 shadow-sm">
+            <div className="p-3 bg-background rounded-xl border border-border/60 shadow-sm">
               <div className="flex items-center gap-1 text-[10px] text-text-secondary mb-1">
                 <Heart className="w-3 h-3 text-emergency animate-pulse" />
                 Heart Rate
@@ -137,7 +166,7 @@ export default function EmergencyCard({ condition, caseId, onFindHospital }: Pro
             </div>
             
             {/* Blood Pressure */}
-            <div className="p-3 bg-white rounded-xl border border-border/60 shadow-sm">
+            <div className="p-3 bg-background rounded-xl border border-border/60 shadow-sm">
               <div className="flex items-center gap-1 text-[10px] text-text-secondary mb-1">
                 <Activity className="w-3 h-3 text-medical" />
                 Blood Pressure
@@ -148,7 +177,7 @@ export default function EmergencyCard({ condition, caseId, onFindHospital }: Pro
             </div>
 
             {/* SpO2 */}
-            <div className="p-3 bg-white rounded-xl border border-border/60 shadow-sm">
+            <div className="p-3 bg-background rounded-xl border border-border/60 shadow-sm">
               <div className="flex items-center gap-1 text-[10px] text-text-secondary mb-1">
                 <Droplets className="w-3 h-3 text-blue-500 animate-bounce" />
                 Oxygen (SpO2)
@@ -159,7 +188,7 @@ export default function EmergencyCard({ condition, caseId, onFindHospital }: Pro
             </div>
 
             {/* Temp */}
-            <div className="p-3 bg-white rounded-xl border border-border/60 shadow-sm">
+            <div className="p-3 bg-background rounded-xl border border-border/60 shadow-sm">
               <div className="flex items-center gap-1 text-[10px] text-text-secondary mb-1">
                 <Thermometer className="w-3 h-3 text-urgent" />
                 Body Temp
@@ -242,15 +271,63 @@ export default function EmergencyCard({ condition, caseId, onFindHospital }: Pro
           </div>
         )}
 
+        {/* First Aid Supplies Availability Nearby */}
+        <div className="px-8 py-6 border-b border-border bg-surface-blue/10">
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-text-primary mb-2">
+            <ShoppingBag className="w-5 h-5 text-medical" />
+            First Aid Supplies Nearby
+          </h3>
+          <p className="text-xs text-text-secondary mb-4 leading-relaxed">
+            Locate critical first-aid materials recommended for this condition at participating pharmacies near you:
+          </p>
+          <div className="space-y-2.5">
+            {recommendedSupplies.map((supply) => {
+              // Static mappings for nearby stores display in triage
+              let storeDetails = "Available at Belgaum Drug House (0.4 km)";
+              let priceStr = "₹25.00";
+              if (supply === 'Paracetamol 650') {
+                storeDetails = "Available at Belgaum Drug House (0.4 km)";
+                priceStr = "₹15.00";
+              } else if (supply === 'Antiseptic Solution') {
+                storeDetails = "Available at Goaves Wellness Pharmacy (1.2 km)";
+                priceStr = "₹80.00";
+              } else if (supply === 'Adhesive Bandages') {
+                storeDetails = "Available at KLES Pharmacy (0.9 km)";
+                priceStr = "₹4.50";
+              } else if (supply === 'Burn Ointment') {
+                storeDetails = "Available at KLES Pharmacy (0.9 km)";
+                priceStr = "₹60.00";
+              }
+              return (
+                <div key={supply} className="flex items-center justify-between p-3 rounded-xl bg-background border border-border/50 text-xs">
+                  <div>
+                    <span className="font-bold text-text-primary block">{supply}</span>
+                    <span className="text-[11px] text-text-secondary mt-0.5 block">{storeDetails}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono font-bold text-medical">{priceStr}</span>
+                    <a
+                      href={`/pharmacy?q=${encodeURIComponent(supply)}`}
+                      className="text-medical font-bold hover:underline flex items-center gap-0.5"
+                    >
+                      Locate <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Actions */}
         <div className="px-8 py-6 flex flex-col sm:flex-row gap-3">
           <button onClick={handleSaveCase} className="btn-primary flex-1 flex items-center justify-center gap-2">
             <Phone className="w-5 h-5" />
             Find Nearest Hospital
           </button>
-          <a href="tel:911" className="btn-secondary flex-1 flex items-center justify-center gap-2">
+          <a href="tel:112" className="btn-secondary flex-1 flex items-center justify-center gap-2">
             <Phone className="w-5 h-5 text-emergency" />
-            Call 911
+            Call 112
           </a>
         </div>
       </div>

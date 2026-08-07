@@ -6,6 +6,11 @@ export interface TranslationDict {
   safety: string;
   hospital: string;
   map: string;
+  consult: string;
+  voiceAnalysis: string;
+  pharmacy: string;
+  rentals: string;
+  adminPortal: string;
   emergency: string;
   triageActive: string;
   whatsHappening: string;
@@ -24,6 +29,11 @@ export const translations: Record<Language, TranslationDict> = {
     safety: 'Safety',
     hospital: 'Hospital',
     map: 'Map',
+    consult: 'Consult Doctor',
+    voiceAnalysis: 'Voice Analysis',
+    pharmacy: 'Pharmacy',
+    rentals: 'Rentals',
+    adminPortal: 'Provider Portal',
     emergency: 'Emergency',
     triageActive: 'Emergency Triage Active',
     whatsHappening: "What's happening?",
@@ -40,6 +50,11 @@ export const translations: Record<Language, TranslationDict> = {
     safety: 'सुरक्षा',
     hospital: 'अस्पताल',
     map: 'नक्शा',
+    consult: 'डॉक्टर से परामर्श',
+    voiceAnalysis: 'आवाज विश्लेषण',
+    pharmacy: 'फार्मेसी',
+    rentals: 'किराया उपकरण',
+    adminPortal: 'प्रदाता पोर्टल',
     emergency: 'आपातकालीन',
     triageActive: 'आपातकालीन ट्राइएज सक्रिय है',
     whatsHappening: 'क्या हो रहा है?',
@@ -56,6 +71,11 @@ export const translations: Record<Language, TranslationDict> = {
     safety: 'ಸುರಕ್ಷತೆ',
     hospital: 'ಆಸ್ಪತ್ರೆ',
     map: 'ನಕ್ಷೆ',
+    consult: 'ವೈದ್ಯರನ್ನು ಸಂಪರ್ಕಿಸಿ',
+    voiceAnalysis: 'ಧ್ವನಿ ವಿಶ್ಲೇಷಣೆ',
+    pharmacy: 'ಫಾರ್ಮಸಿ',
+    rentals: 'ಉಪಕರಣ ಬಾಡಿಗೆ',
+    adminPortal: 'ಪ್ರದಾತರ ಪೋರ್ಟಲ್',
     emergency: 'ತುರ್ತು',
     triageActive: 'ತುರ್ತು ಟ್ರಯೇಜ್ ಸಕ್ರಿಯವಾಗಿದೆ',
     whatsHappening: 'ಏನಾಗುತ್ತಿದೆ?',
@@ -72,6 +92,11 @@ export const translations: Record<Language, TranslationDict> = {
     safety: 'Seguridad',
     hospital: 'Hospital',
     map: 'Mapa',
+    consult: 'Consultar Doctor',
+    voiceAnalysis: 'Análisis de Voz',
+    pharmacy: 'Farmacia',
+    rentals: 'Alquileres',
+    adminPortal: 'Portal de Proveedores',
     emergency: 'Emergencia',
     triageActive: 'Triaje de Emergencia Activo',
     whatsHappening: '¿Qué está pasando?',

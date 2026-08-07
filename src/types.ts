@@ -49,3 +49,37 @@ export interface Hospital {
   lat: number | null;
   lng: number | null;
 }
+
+export interface Doctor {
+  id: string;
+  name: string;
+  specialty: string;
+  status: 'available' | 'busy' | 'offline';
+  meetUrl: string;
+  avatarUrl?: string;
+  createdAt?: string;
+}
+
+export interface Consultation {
+  id: string;
+  doctorId: string;
+  patientName: string;
+  status: 'active' | 'completed';
+  createdAt: string;
+  endedAt?: string | null;
+}
+
+export interface VoiceHealthReport {
+  summary: string;
+  possible_conditions: Array<{
+    name: string;
+    probability: string;
+  }>;
+  severity: 'Low' | 'Moderate' | 'High' | 'Critical';
+  recommended_specialist: string;
+  first_aid: string[];
+  ambulance_required: boolean;
+  reason: string;
+  next_steps: string[];
+  disclaimer: string;
+}

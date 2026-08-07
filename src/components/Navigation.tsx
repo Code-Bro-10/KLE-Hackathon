@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, Phone, LayoutDashboard, Info, ShieldCheck, Globe, Map } from 'lucide-react';
+import { Activity, Phone, LayoutDashboard, Info, ShieldCheck, Globe, Map, Video, Sun, Moon, Store, Truck, UserCheck } from 'lucide-react';
 import { useStore } from '@/store/StoreContext';
 import { translations, type Language } from '@/lib/translations';
 
@@ -10,9 +11,29 @@ export default function Navigation() {
 
   const t = translations[language as Language] || translations.en;
 
+  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  });
+
+  const toggleTheme = () => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('resq-theme', 'dark');
+      setThemeState('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('resq-theme', 'light');
+      setThemeState('light');
+    }
+  };
+
   const links = [
     { to: '/', label: t.home, icon: Activity },
     { to: '/map', label: t.map, icon: Map },
+    { to: '/consult', label: t.consult, icon: Video },
+    { to: '/pharmacy', label: t.pharmacy, icon: Store },
+    { to: '/rentals', label: t.rentals, icon: Truck },
+    { to: '/admin', label: t.adminPortal, icon: UserCheck },
     { to: '/about', label: t.about, icon: Info },
     { to: '/safety', label: t.safety, icon: ShieldCheck },
     { to: '/dashboard', label: t.hospital, icon: LayoutDashboard },
@@ -35,7 +56,7 @@ export default function Navigation() {
               key={link.to}
               to={link.to}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                active ? 'bg-text-primary text-white' : 'text-text-secondary hover:text-text-primary hover:bg-surface'
+                active ? 'bg-text-primary text-background' : 'text-text-secondary hover:text-text-primary hover:bg-surface'
               }`}
             >
               {link.label}
@@ -58,6 +79,15 @@ export default function Navigation() {
           <option value="es">ESP</option>
         </select>
       </div>
+
+      {/* Theme Toggle Button */}
+      <button
+        onClick={toggleTheme}
+        className="w-10 h-10 rounded-full bg-surface border border-border/40 flex items-center justify-center text-text-secondary hover:bg-surface-blue hover:text-text-primary transition-colors mr-1"
+        title="Toggle dark/light mode"
+      >
+        {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4" />}
+      </button>
 
       <button
         onClick={() => navigate('/emergency')}

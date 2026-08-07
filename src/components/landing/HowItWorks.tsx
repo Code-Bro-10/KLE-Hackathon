@@ -30,7 +30,7 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section className="section-padding-normal bg-white">
+    <section className="section-padding-normal bg-background">
       <div className="container-main">
         <div className="text-center mb-16">
           <div className="inline-block px-4 py-2 rounded-full bg-surface text-sm font-medium text-text-secondary mb-4">
@@ -54,7 +54,7 @@ export default function HowItWorks() {
                 <p className="text-text-secondary text-[15px] leading-relaxed flex-1">{step.description}</p>
               </div>
               {i < steps.length - 1 && (
-                <div className="hidden lg:flex absolute top-1/2 -right-3 z-10 w-6 h-6 rounded-full bg-white border border-border items-center justify-center">
+                <div className="hidden lg:flex absolute top-1/2 -right-3 z-10 w-6 h-6 rounded-full bg-background border border-border items-center justify-center">
                   <ArrowRight className="w-3 h-3 text-text-muted" />
                 </div>
               )}

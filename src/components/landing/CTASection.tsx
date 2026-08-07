@@ -3,7 +3,7 @@ import { Phone, ArrowRight, Activity } from 'lucide-react';
 
 export default function CTASection() {
   return (
-    <section className="section-padding-normal bg-white">
+    <section className="section-padding-normal bg-background">
       <div className="container-main">
         <div className="card-showcase p-12 md:p-20 text-center relative overflow-hidden gradient-medical">
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-emergency/10 blur-3xl orb-glow" />

@@ -84,7 +84,7 @@ export default function SOSButton() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: 'spring', duration: 0.5 }}
-              className="bg-white max-w-md w-full rounded-3xl p-8 border border-emergency/20 text-center shadow-card relative overflow-hidden"
+              className="bg-background max-w-md w-full rounded-3xl p-8 border border-emergency/20 text-center shadow-card relative overflow-hidden"
             >
               {/* Background emergency strobe glow */}
               <div className={`absolute inset-0 opacity-5 pointer-events-none transition-colors duration-300 ${isDispatched ? 'bg-red-600 animate-pulse' : 'bg-amber-500'}`} />
@@ -108,7 +108,7 @@ export default function SOSButton() {
 
                   <button
                     onClick={handleCancel}
-                    className="w-full h-14 rounded-full bg-text-primary text-white font-bold text-base flex items-center justify-center gap-2 hover:bg-black transition-colors"
+                    className="w-full h-14 rounded-full bg-text-primary text-background font-bold text-base flex items-center justify-center gap-2 hover:bg-black transition-colors"
                   >
                     <XCircle className="w-5 h-5" />
                     CANCEL SOS

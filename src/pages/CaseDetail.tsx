@@ -183,8 +183,8 @@ export default function CaseDetail() {
                   <CheckCircle2 className="w-5 h-5 text-stable" /> Mark Resolved
                 </button>
               )}
-              <a href="tel:911" className="btn-secondary flex items-center justify-center gap-2 px-6">
-                <Phone className="w-5 h-5 text-emergency" /> 911
+              <a href="tel:112" className="btn-secondary flex items-center justify-center gap-2 px-6">
+                <Phone className="w-5 h-5 text-emergency" /> 112
               </a>
             </div>
           </div>

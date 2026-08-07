@@ -21,7 +21,7 @@ export default function ConditionsGrid() {
     <section className="section-padding-normal bg-surface">
       <div className="container-main">
         <div className="text-center mb-16">
-          <div className="inline-block px-4 py-2 rounded-full bg-white text-sm font-medium text-text-secondary mb-4">
+          <div className="inline-block px-4 py-2 rounded-full bg-background text-sm font-medium text-text-secondary mb-4">
             Coverage
           </div>
           <h2 className="heading-section mb-4">Trained on dozens of<br />real emergencies.</h2>
@@ -38,7 +38,7 @@ export default function ConditionsGrid() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.04, duration: 0.4 }}
-              className="card-small p-6 bg-white flex items-center gap-4 hover:shadow-card transition-shadow"
+              className="card-small p-6 bg-background flex items-center gap-4 hover:shadow-card transition-shadow"
             >
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${c.bg}`}>
                 <c.icon className={`w-6 h-6 ${c.color}`} strokeWidth={2} />
