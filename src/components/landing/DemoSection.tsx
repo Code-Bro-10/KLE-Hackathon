@@ -1,7 +1,31 @@
 import { motion } from 'framer-motion';
 import { Activity, Clock, MapPin, Heart, ShieldCheck, Brain } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function DemoSection() {
+  const { t } = useTranslation();
+
+  const cards = [
+    {
+      icon: Brain,
+      title: t('instantAnalysis'),
+      desc: t('instantAnalysisDesc'),
+      stat: t('instantAnalysisStat'),
+    },
+    {
+      icon: Heart,
+      title: t('stepByStepAid'),
+      desc: t('stepByStepAidDesc'),
+      stat: t('stepByStepAidStat'),
+    },
+    {
+      icon: MapPin,
+      title: t('liveErRouting'),
+      desc: t('liveErRoutingDesc'),
+      stat: t('liveErRoutingStat'),
+    },
+  ];
+
   return (
     <section className="section-padding-normal section-dark text-white relative overflow-hidden">
       <div className="absolute top-0 left-0 w-96 h-96 rounded-full bg-emergency/10 blur-3xl" />
@@ -10,35 +34,18 @@ export default function DemoSection() {
       <div className="container-main relative z-10">
         <div className="text-center mb-16">
           <div className="inline-block px-4 py-2 rounded-full bg-white/10 text-sm font-medium text-white/80 mb-4">
-            See It In Action
+            {t('seeItInAction')}
           </div>
-          <h2 className="heading-section text-white mb-4">A clear head in a<br />critical moment.</h2>
+          <h2 className="heading-section text-white mb-4">
+            {t('clearHeadTitle')}
+          </h2>
           <p className="text-white/60 text-lg max-w-lg mx-auto">
-            Watch how ResQ turns a frightening situation into a calm, guided response.
+            {t('clearHeadDesc')}
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {[
-            {
-              icon: Brain,
-              title: 'Instant Analysis',
-              desc: 'AI identifies the condition and urgency in under 3 seconds.',
-              stat: '92% confidence',
-            },
-            {
-              icon: Heart,
-              title: 'Step-by-Step Aid',
-              desc: 'Clear, numbered first-aid instructions you can follow in real time.',
-              stat: '5 steps shown',
-            },
-            {
-              icon: MapPin,
-              title: 'Live ER Routing',
-              desc: 'Nearest available emergency room with bed and wait-time status.',
-              stat: '1.9 km away',
-            },
-          ].map((card, i) => (
+          {cards.map((card, i) => (
             <motion.div
               key={card.title}
               initial={{ opacity: 0, y: 30 }}
@@ -63,7 +70,7 @@ export default function DemoSection() {
         <div className="text-center mt-16">
           <div className="inline-flex items-center gap-3 text-white/80">
             <ShieldCheck className="w-5 h-5 text-stable" />
-            <span className="text-sm">ResQ is a guide, not a replacement for professional medical care. Always call 112 when in doubt.</span>
+            <span className="text-sm">{t('medicalDisclaimer')}</span>
           </div>
         </div>
       </div>

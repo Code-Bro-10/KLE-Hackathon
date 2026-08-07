@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import type { EmergencyCase, Hospital } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { mockHospitals } from '@/data/hospitals';
+import i18n from '../i18n';
 
 interface StoreContextType {
   currentCase: EmergencyCase | null;
@@ -27,6 +28,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const setLanguage = (lang: string) => {
     setLanguageState(lang);
     localStorage.setItem('resq-lang', lang);
+    i18n.changeLanguage(lang);
   };
 
   const loadHospitals = async () => {
@@ -105,6 +107,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadHospitals();
     loadCases();
+    i18n.changeLanguage(language);
   }, []);
 
   return (

@@ -1,7 +1,10 @@
 import { Activity, Phone, Mail, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export default function Footer() {
+  const { t } = useTranslation();
+
   return (
     <footer className="bg-dark text-white py-16">
       <div className="container-main">
@@ -14,17 +17,17 @@ export default function Footer() {
               <span className="font-semibold text-lg tracking-tight">ResQ</span>
             </div>
             <p className="text-white/60 max-w-sm leading-relaxed">
-              AI-powered emergency triage and first-aid guidance. Every second counts — ResQ helps you make them count.
+              {t('footerDesc')}
             </p>
           </div>
 
           <div>
             <h4 className="font-semibold mb-4">Platform</h4>
             <ul className="space-y-2 text-white/60">
-              <li><Link to="/" className="hover:text-white transition-colors">Home</Link></li>
-              <li><Link to="/emergency" className="hover:text-white transition-colors">Emergency Triage</Link></li>
-              <li><Link to="/dashboard" className="hover:text-white transition-colors">Hospital Dashboard</Link></li>
-              <li><Link to="/safety" className="hover:text-white transition-colors">Safety Tips</Link></li>
+              <li><Link to="/" className="hover:text-white transition-colors">{t('home')}</Link></li>
+              <li><Link to="/emergency" className="hover:text-white transition-colors">{t('emergency')}</Link></li>
+              <li><Link to="/dashboard" className="hover:text-white transition-colors">{t('hospital')}</Link></li>
+              <li><Link to="/safety" className="hover:text-white transition-colors">{t('safety')}</Link></li>
             </ul>
           </div>
 
@@ -44,9 +47,9 @@ export default function Footer() {
 
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-white/40 text-sm">
-            ResQ is a guide, not a replacement for professional medical care. Always call 112 in a real emergency.
+            {t('medicalDisclaimer')}
           </p>
-          <p className="text-white/40 text-sm">© 2024 ResQ AI. All rights reserved.</p>
+          <p className="text-white/40 text-sm">{t('copyright')}</p>
         </div>
       </div>
     </footer>

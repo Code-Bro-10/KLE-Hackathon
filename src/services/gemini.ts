@@ -280,10 +280,43 @@ Transcript/Prescription described: "${transcript}"`;
   }
 
   const parsed = JSON.parse(cleanedText);
-
   return {
     suggestion: parsed.suggestion || 'Consult your physician for equipment suggestions.',
     items: Array.isArray(parsed.items) ? parsed.items : [],
     rationale: parsed.rationale || 'Assessment completed based on symptoms notes.',
   };
+}
+
+export async function translateText(text: string, targetLanguage: string): Promise<string> {
+  if (!GEMINI_API_KEY) {
+    throw new Error('Gemini API key is not configured');
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+  const promptText = `Translate the following text to the language: "${targetLanguage}".
+Only return the translated text itself. Do not write any explanations, notes, metadata, or markdown wrappers.
+
+Text to translate:
+"${text}"`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: promptText }] }]
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error (${response.status}): ${errorText}`);
+  }
+
+  const resData = await response.json();
+  const translated = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+  return translated ? translated.trim() : text;
 }

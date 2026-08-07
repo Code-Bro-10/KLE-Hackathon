@@ -1,42 +1,47 @@
 import { Phone, Mic, Brain, Building2, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-const steps = [
-  {
-    icon: Phone,
-    title: 'Describe the Emergency',
-    description: 'Open the app and tell ResQ what\u2019s happening. Type or speak naturally — no medical jargon needed.',
-    color: 'bg-emergency-soft text-emergency',
-  },
-  {
-    icon: Mic,
-    title: 'Voice or Text Input',
-    description: 'Prefer to speak? Use voice input to describe symptoms hands-free, ideal when your hands are busy helping someone.',
-    color: 'bg-blue-50 text-medical',
-  },
-  {
-    icon: Brain,
-    title: 'AI Analyzes Instantly',
-    description: 'ResQ\u2019s AI identifies the likely condition, assesses urgency, and delivers step-by-step first aid in under 3 seconds.',
-    color: 'bg-amber-50 text-urgent',
-  },
-  {
-    icon: Building2,
-    title: 'Find Nearest ER',
-    description: 'Get live directions to the closest available emergency room with real-time bed and wait-time data.',
-    color: 'bg-green-50 text-stable',
-  },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function HowItWorks() {
+  const { t } = useTranslation();
+
+  const steps = [
+    {
+      icon: Phone,
+      title: t('step1Title'),
+      description: t('step1Desc'),
+      color: 'bg-emergency-soft text-emergency',
+    },
+    {
+      icon: Mic,
+      title: t('step2Title'),
+      description: t('step2Desc'),
+      color: 'bg-blue-50 text-medical',
+    },
+    {
+      icon: Brain,
+      title: t('step3Title'),
+      description: t('step3Desc'),
+      color: 'bg-amber-50 text-urgent',
+    },
+    {
+      icon: Building2,
+      title: t('step4Title'),
+      description: t('step4Desc'),
+      color: 'bg-green-50 text-stable',
+    },
+  ];
+
   return (
     <section className="section-padding-normal bg-background">
       <div className="container-main">
         <div className="text-center mb-16">
           <div className="inline-block px-4 py-2 rounded-full bg-surface text-sm font-medium text-text-secondary mb-4">
-            How It Works
+            {t('howItWorksSub')}
           </div>
-          <h2 className="heading-section mb-4">From panic to action<br />in four simple steps.</h2>
+          <h2 className="heading-section mb-4">
+            {t('howItWorksTitle')}
+          </h2>
           <p className="body-text max-w-lg mx-auto">
             ResQ guides you through the critical first minutes of any medical emergency with calm, clear, AI-driven instructions.
           </p>

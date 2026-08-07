@@ -1,32 +1,37 @@
 import { motion } from 'framer-motion';
 import { Heart, Brain, Wind, Bone, Droplet, Flame, Activity, AlertCircle, Baby, Thermometer } from 'lucide-react';
-
-const conditions = [
-  { icon: Heart, name: 'Heart Attack', color: 'text-emergency', bg: 'bg-emergency-soft' },
-  { icon: Brain, name: 'Stroke', color: 'text-emergency', bg: 'bg-emergency-soft' },
-  { icon: Wind, name: 'Anaphylaxis', color: 'text-emergency', bg: 'bg-emergency-soft' },
-  { icon: Droplet, name: 'Severe Bleeding', color: 'text-emergency', bg: 'bg-emergency-soft' },
-  { icon: Activity, name: 'Choking', color: 'text-emergency', bg: 'bg-emergency-soft' },
-  { icon: Flame, name: 'Severe Burns', color: 'text-urgent', bg: 'bg-amber-50' },
-  { icon: Bone, name: 'Fractures', color: 'text-urgent', bg: 'bg-amber-50' },
-  { icon: AlertCircle, name: 'Seizures', color: 'text-urgent', bg: 'bg-amber-50' },
-  { icon: Wind, name: 'Asthma Attack', color: 'text-urgent', bg: 'bg-amber-50' },
-  { icon: Thermometer, name: 'High Fever', color: 'text-moderate', bg: 'bg-yellow-50' },
-  { icon: Baby, name: 'Pediatric', color: 'text-medical', bg: 'bg-blue-50' },
-  { icon: Activity, name: 'Allergic Reaction', color: 'text-moderate', bg: 'bg-yellow-50' },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function ConditionsGrid() {
+  const { t } = useTranslation();
+
+  const conditions = [
+    { icon: Heart, name: t('heartAttack'), color: 'text-emergency', bg: 'bg-emergency-soft' },
+    { icon: Brain, name: t('stroke'), color: 'text-emergency', bg: 'bg-emergency-soft' },
+    { icon: Wind, name: t('anaphylaxis'), color: 'text-emergency', bg: 'bg-emergency-soft' },
+    { icon: Droplet, name: t('severeBleeding'), color: 'text-emergency', bg: 'bg-emergency-soft' },
+    { icon: Activity, name: t('choking'), color: 'text-emergency', bg: 'bg-emergency-soft' },
+    { icon: Flame, name: t('severeBurns'), color: 'text-urgent', bg: 'bg-amber-50' },
+    { icon: Bone, name: t('fractures'), color: 'text-urgent', bg: 'bg-amber-50' },
+    { icon: AlertCircle, name: t('seizures'), color: 'text-urgent', bg: 'bg-amber-50' },
+    { icon: Wind, name: t('asthmaAttack'), color: 'text-urgent', bg: 'bg-amber-50' },
+    { icon: Thermometer, name: t('highFever'), color: 'text-moderate', bg: 'bg-yellow-50' },
+    { icon: Baby, name: t('pediatric'), color: 'text-medical', bg: 'bg-blue-50' },
+    { icon: Activity, name: t('allergicReaction'), color: 'text-moderate', bg: 'bg-yellow-50' },
+  ];
+
   return (
     <section className="section-padding-normal bg-surface">
       <div className="container-main">
         <div className="text-center mb-16">
           <div className="inline-block px-4 py-2 rounded-full bg-background text-sm font-medium text-text-secondary mb-4">
-            Coverage
+            {t('coverageSub')}
           </div>
-          <h2 className="heading-section mb-4">Trained on dozens of<br />real emergencies.</h2>
+          <h2 className="heading-section mb-4">
+            {t('coverageTitle')}
+          </h2>
           <p className="body-text max-w-lg mx-auto">
-            From life-threatening cardiac events to everyday injuries, ResQ recognizes and guides you through a wide range of conditions.
+            {t('coverageDesc')}
           </p>
         </div>
 

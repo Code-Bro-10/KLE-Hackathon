@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Mic, Send, Phone, Camera, Image, Trash2, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/StoreContext';
-import { translations, type Language } from '@/lib/translations';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   onAnalyze: (text: string, transcript: string, photoUrl: string | null) => void;
@@ -11,7 +11,7 @@ interface Props {
 
 export default function EmergencyInput({ onAnalyze, isAnalyzing }: Props) {
   const { language } = useStore();
-  const t = translations[language as Language] || translations.en;
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -154,18 +154,18 @@ export default function EmergencyInput({ onAnalyze, isAnalyzing }: Props) {
           <div className="text-center mb-10">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emergency-soft mb-6">
               <span className="w-2 h-2 rounded-full bg-emergency live-dot" />
-              <span className="text-sm font-medium text-emergency">{t.triageActive}</span>
+              <span className="text-sm font-medium text-emergency">{t('triageActive')}</span>
             </div>
-            <h1 className="heading-section mb-4">{t.whatsHappening}</h1>
+            <h1 className="heading-section mb-4">{t('whatsHappening')}</h1>
             <p className="body-text max-w-md mx-auto">
-              {t.describeSymptoms}
+              {t('describeSymptoms')}
             </p>
           </div>
 
           <div className="card p-8 mb-6">
             <textarea
               className="textarea-field"
-              placeholder={t.placeholder}
+              placeholder={t('placeholder')}
               value={text}
               onChange={(e) => setText(e.target.value)}
               disabled={isAnalyzing}
@@ -257,7 +257,7 @@ export default function EmergencyInput({ onAnalyze, isAnalyzing }: Props) {
                 className="btn-emergency h-14 px-8 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ml-auto"
               >
                 <Send className="w-5 h-5" strokeWidth={2} />
-                {t.analyzeNow}
+                {t('analyzeNow')}
               </button>
             </div>
 
@@ -267,7 +267,7 @@ export default function EmergencyInput({ onAnalyze, isAnalyzing }: Props) {
           </div>
 
           <div className="mb-8">
-            <p className="text-sm text-text-muted text-center mb-3">{t.tryExample}</p>
+            <p className="text-sm text-text-muted text-center mb-3">{t('tryExample')}</p>
             <div className="flex flex-wrap gap-2 justify-center">
               {quickPrompts.map((prompt) => (
                 <button
@@ -282,9 +282,9 @@ export default function EmergencyInput({ onAnalyze, isAnalyzing }: Props) {
           </div>
 
           <div className="text-center">
-            <a href={`tel:${t.emergencyNumber}`} className="inline-flex items-center gap-2 text-emergency font-semibold hover:underline">
+            <a href={`tel:${t('emergencyNumber')}`} className="inline-flex items-center gap-2 text-emergency font-semibold hover:underline">
               <Phone className="w-5 h-5" strokeWidth={2.5} />
-              {t.callDirectly}
+              {t('callDirectly')}
             </a>
           </div>
         </motion.div>

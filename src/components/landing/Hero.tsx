@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Phone, ArrowRight, ShieldCheck, Activity, Zap, Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function Hero() {
+  const { t } = useTranslation();
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden gradient-hero pt-32 pb-20">
       {/* Floating orbs */}
@@ -12,16 +15,15 @@ export default function Hero() {
       <div className="container-main relative z-10 text-center">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/60 backdrop-blur-sm border border-border mb-8 slide-up">
           <span className="w-2 h-2 rounded-full bg-emergency live-dot" />
-          <span className="text-sm font-medium text-text-secondary">AI-Powered Emergency Triage</span>
+          <span className="text-sm font-medium text-text-secondary">{t('heroSub')}</span>
         </div>
 
         <h1 className="heading-display mb-6 slide-up" style={{ animationDelay: '0.1s' }}>
-          Every second<br />counts in an emergency.
+          {t('heroTitle')}
         </h1>
 
         <p className="body-text max-w-xl mx-auto mb-10 slide-up" style={{ animationDelay: '0.2s' }}>
-          Describe what's happening. Get instant AI-guided first aid, urgency assessment,
-          and live directions to the nearest available emergency room.
+          {t('heroDesc')}
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 slide-up" style={{ animationDelay: '0.3s' }}>
@@ -30,13 +32,13 @@ export default function Hero() {
             className="btn-emergency h-16 px-10 flex items-center gap-3 text-lg"
           >
             <Phone className="w-5 h-5" strokeWidth={2.5} />
-            Start Emergency Triage
+            {t('startTriage')}
           </Link>
           <Link
             to="/dashboard"
             className="btn-secondary h-16 px-8 flex items-center gap-2 text-lg"
           >
-            Hospital Dashboard
+            {t('hospitalDashboard')}
             <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
@@ -44,9 +46,9 @@ export default function Hero() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mt-20 slide-up" style={{ animationDelay: '0.4s' }}>
           {[
-            { icon: Zap, value: '< 3 sec', label: 'AI Analysis', color: 'text-emergency' },
-            { icon: ShieldCheck, value: '14+', label: 'Conditions Covered', color: 'text-medical' },
-            { icon: Clock, value: '24/7', label: 'Always Available', color: 'text-urgent' },
+            { icon: Zap, value: '< 3 sec', label: t('aiAnalysis'), color: 'text-emergency' },
+            { icon: ShieldCheck, value: '14+', label: t('conditionsCovered'), color: 'text-medical' },
+            { icon: Clock, value: '24/7', label: t('alwaysAvailable'), color: 'text-urgent' },
           ].map((stat) => (
             <div key={stat.label} className="flex flex-col items-center">
               <stat.icon className={`w-7 h-7 mb-2 ${stat.color}`} strokeWidth={2} />

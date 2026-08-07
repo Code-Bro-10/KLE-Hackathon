@@ -2,14 +2,13 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Activity, Phone, LayoutDashboard, Info, ShieldCheck, Globe, Map, Video, Sun, Moon, Store, Truck, UserCheck } from 'lucide-react';
 import { useStore } from '@/store/StoreContext';
-import { translations, type Language } from '@/lib/translations';
+import { useTranslation } from 'react-i18next';
 
 export default function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const { language, setLanguage } = useStore();
-
-  const t = translations[language as Language] || translations.en;
+  const { t } = useTranslation();
 
   const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
     return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
@@ -28,15 +27,15 @@ export default function Navigation() {
   };
 
   const links = [
-    { to: '/', label: t.home, icon: Activity },
-    { to: '/map', label: t.map, icon: Map },
-    { to: '/consult', label: t.consult, icon: Video },
-    { to: '/pharmacy', label: t.pharmacy, icon: Store },
-    { to: '/rentals', label: t.rentals, icon: Truck },
-    { to: '/admin', label: t.adminPortal, icon: UserCheck },
-    { to: '/about', label: t.about, icon: Info },
-    { to: '/safety', label: t.safety, icon: ShieldCheck },
-    { to: '/dashboard', label: t.hospital, icon: LayoutDashboard },
+    { to: '/', label: t('home'), icon: Activity },
+    { to: '/map', label: t('map'), icon: Map },
+    { to: '/consult', label: t('consult'), icon: Video },
+    { to: '/pharmacy', label: t('pharmacy'), icon: Store },
+    { to: '/rentals', label: t('rentals'), icon: Truck },
+    { to: '/admin', label: t('adminPortal'), icon: UserCheck },
+    { to: '/about', label: t('about'), icon: Info },
+    { to: '/safety', label: t('safety'), icon: ShieldCheck },
+    { to: '/dashboard', label: t('hospital'), icon: LayoutDashboard },
   ];
 
   return (
@@ -73,10 +72,16 @@ export default function Navigation() {
           onChange={(e) => setLanguage(e.target.value)}
           className="bg-transparent text-text-secondary text-[11px] font-bold focus:outline-none cursor-pointer pr-1"
         >
-          <option value="en">EN</option>
-          <option value="hi">हिंदी</option>
-          <option value="kn">ಕನ್ನಡ</option>
-          <option value="es">ESP</option>
+          <option value="en">English (EN)</option>
+          <option value="hi">हिंदी (HI)</option>
+          <option value="mr">मराठी (MR)</option>
+          <option value="kn">ಕನ್ನಡ (KN)</option>
+          <option value="ta">தமிழ் (TA)</option>
+          <option value="te">తెలుగు (TE)</option>
+          <option value="ml">മലയാളം (ML)</option>
+          <option value="gu">ગુજરાતી (GU)</option>
+          <option value="bn">বাংলা (BN)</option>
+          <option value="pa">ਪੰਜਾਬੀ (PA)</option>
         </select>
       </div>
 
@@ -94,7 +99,7 @@ export default function Navigation() {
         className="ml-1 md:ml-2 h-12 px-5 rounded-full bg-emergency text-white font-semibold text-sm flex items-center gap-2 shadow-emergency hover:scale-105 transition-transform"
       >
         <Phone className="w-4 h-4" strokeWidth={2.5} />
-        <span className="hidden sm:inline">{t.emergency}</span>
+        <span className="hidden sm:inline">{t('emergency')}</span>
       </button>
     </nav>
   );
