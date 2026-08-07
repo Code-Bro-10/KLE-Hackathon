@@ -6,6 +6,7 @@ import HospitalDashboard from '@/pages/HospitalDashboard';
 import CaseDetail from '@/pages/CaseDetail';
 import AboutPage from '@/pages/AboutPage';
 import SafetyPage from '@/pages/SafetyPage';
+import MapPage from '@/pages/MapPage';
 import SOSButton from '@/components/emergency/SOSButton';
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/case/:id" element={<CaseDetail />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/safety" element={<SafetyPage />} />
+          <Route path="/map" element={<MapPage />} />
         </Routes>
         <SOSButton />
       </BrowserRouter>

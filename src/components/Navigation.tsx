@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, Phone, LayoutDashboard, Info, ShieldCheck, Globe } from 'lucide-react';
+import { Activity, Phone, LayoutDashboard, Info, ShieldCheck, Globe, Map } from 'lucide-react';
 import { useStore } from '@/store/StoreContext';
 import { translations, type Language } from '@/lib/translations';
 
@@ -12,6 +12,7 @@ export default function Navigation() {
 
   const links = [
     { to: '/', label: t.home, icon: Activity },
+    { to: '/map', label: t.map, icon: Map },
     { to: '/about', label: t.about, icon: Info },
     { to: '/safety', label: t.safety, icon: ShieldCheck },
     { to: '/dashboard', label: t.hospital, icon: LayoutDashboard },

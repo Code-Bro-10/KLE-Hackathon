@@ -5,6 +5,7 @@ export interface TranslationDict {
   about: string;
   safety: string;
   hospital: string;
+  map: string;
   emergency: string;
   triageActive: string;
   whatsHappening: string;
@@ -22,6 +23,7 @@ export const translations: Record<Language, TranslationDict> = {
     about: 'About',
     safety: 'Safety',
     hospital: 'Hospital',
+    map: 'Map',
     emergency: 'Emergency',
     triageActive: 'Emergency Triage Active',
     whatsHappening: "What's happening?",
@@ -37,6 +39,7 @@ export const translations: Record<Language, TranslationDict> = {
     about: 'हमारे बारे में',
     safety: 'सुरक्षा',
     hospital: 'अस्पताल',
+    map: 'नक्शा',
     emergency: 'आपातकालीन',
     triageActive: 'आपातकालीन ट्राइएज सक्रिय है',
     whatsHappening: 'क्या हो रहा है?',
@@ -52,6 +55,7 @@ export const translations: Record<Language, TranslationDict> = {
     about: 'ನಮ್ಮ ಬಗ್ಗೆ',
     safety: 'ಸುರಕ್ಷತೆ',
     hospital: 'ಆಸ್ಪತ್ರೆ',
+    map: 'ನಕ್ಷೆ',
     emergency: 'ತುರ್ತು',
     triageActive: 'ತುರ್ತು ಟ್ರಯೇಜ್ ಸಕ್ರಿಯವಾಗಿದೆ',
     whatsHappening: 'ಏನಾಗುತ್ತಿದೆ?',
@@ -67,6 +71,7 @@ export const translations: Record<Language, TranslationDict> = {
     about: 'Nosotros',
     safety: 'Seguridad',
     hospital: 'Hospital',
+    map: 'Mapa',
     emergency: 'Emergencia',
     triageActive: 'Triaje de Emergencia Activo',
     whatsHappening: '¿Qué está pasando?',
