@@ -31,10 +31,11 @@ const ANALYTICS_DATA = {
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'analytics' | 'orders' | 'doctors' | 'equipment' | 'pharmacies' | 'hospitals' | 'ambulances'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'orders' | 'doctors' | 'equipment' | 'pharmacies' | 'hospitals' | 'ambulances' | 'pharmacy-inventory'>('analytics');
   
   // Data States
   const [orders, setOrders] = useState<any[]>([]);
+  const [medicines, setMedicines] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
   const [equipment, setEquipment] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
@@ -43,6 +44,7 @@ export default function AdminDashboardPage() {
   const [consultations, setConsultations] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isDbOnline, setIsDbOnline] = useState(false);
+  const usingFallback = !isDbOnline;
 
   // ── Realtime appointment notification state ──────────────────
   const [incomingAppt, setIncomingAppt] = useState<Appointment | null>(null);
@@ -53,9 +55,18 @@ export default function AdminDashboardPage() {
 
   // Form States (Generic Add dialogs)
   const [showAddForm, setShowAddForm] = useState(false);
-  const [formType, setFormType] = useState<'doctor' | 'equipment' | 'vendor' | 'hospital' | 'ambulance'>('doctor');
+  const [formType, setFormType] = useState<'doctor' | 'equipment' | 'vendor' | 'hospital' | 'ambulance' | 'medicine'>('doctor');
 
   // Input states for form submissions
+  const [medName, setMedName] = useState('');
+  const [medCategory, setMedCategory] = useState('Pain Relief');
+  const [medDescription, setMedDescription] = useState('');
+  const [medPrice, setMedPrice] = useState('');
+  const [medStock, setMedStock] = useState('');
+  const [medImageUrl, setMedImageUrl] = useState('');
+  const [medAvailable, setMedAvailable] = useState(true);
+  const [editingMedId, setEditingMedId] = useState<string | null>(null);
+
   const [docName, setDocName] = useState('');
   const [docSpecialty, setDocSpecialty] = useState('General Physician');
   const [docMeet, setDocMeet] = useState('https://meet.google.com/abc-defg-hij');
@@ -77,48 +88,131 @@ export default function AdminDashboardPage() {
   const [ambPlate, setAmbPlate] = useState('');
 
   const loadAllAdminData = async () => {
+    setIsDbOnline(true); // default to true, set to false if any query fails
+
+    // 1. Fetch Orders with nested items
     try {
-      // 1. Fetch Orders
-      const { data: dbOrders } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+      const { data: dbOrders, error } = await supabase.from('orders').select('*, order_items(*)').order('created_at', { ascending: false });
+      if (error) throw error;
       if (dbOrders) setOrders(dbOrders);
+    } catch (err) {
+      console.warn('Orders DB fetch failed, using local orders:', err);
+      const localOrders = localStorage.getItem('resq-medicine-orders');
+      if (localOrders) setOrders(JSON.parse(localOrders));
+      setIsDbOnline(false);
+    }
 
-      // 2. Fetch Doctors
-      const { data: dbDocs } = await supabase.from('doctors').select('*');
-      if (dbDocs) setDoctors(dbDocs);
+    // 2. Fetch Medicines Catalog
+    try {
+      const { data: dbMeds, error } = await supabase.from('medicines').select('*').order('medicine_name', { ascending: true });
+      if (error) throw error;
+      if (dbMeds) setMedicines(dbMeds);
+    } catch (err) {
+      console.warn('Medicines DB fetch failed, using local medicines:', err);
+      const localMeds = localStorage.getItem('resq-registered-medicines');
+      if (localMeds) setMedicines(JSON.parse(localMeds));
+      setIsDbOnline(false);
+    }
 
-      // 3. Fetch Equipment Items
-      const { data: dbEq } = await supabase.from('equipment_items').select('*');
-      if (dbEq) setEquipment(dbEq);
+    // 3. Fetch Doctors
+    try {
+      const { data: dbDocs, error } = await supabase.from('doctors').select('*');
+      if (error) throw error;
+      if (dbDocs && dbDocs.length > 0) {
+        setDoctors(dbDocs);
+      } else {
+        throw new Error('No doctors found');
+      }
+    } catch (err) {
+      console.warn('Doctors DB fetch failed, using fallback:', err);
+      setDoctors([
+        { id: 'doc-1', name: 'Dr. David Chen', specialty: 'Cardiologist', meet_url: 'https://meet.google.com/abc-defg-hij', status: 'available' },
+        { id: 'doc-2', name: 'Dr. Sarah Jenkins', specialty: 'Pediatrician', meet_url: 'https://meet.google.com/abc-defg-hij', status: 'available' }
+      ]);
+    }
 
-      // 4. Fetch Vendors
-      const { data: dbVendors } = await supabase.from('equipment_vendors').select('*');
-      if (dbVendors) setVendors(dbVendors);
+    // 4. Fetch Equipment Items
+    try {
+      const { data: dbEq, error } = await supabase.from('equipment_items').select('*');
+      if (error) throw error;
+      if (dbEq && dbEq.length > 0) {
+        setEquipment(dbEq);
+      } else {
+        throw new Error('No equipment items found');
+      }
+    } catch (err) {
+      console.warn('Equipment DB fetch failed, using fallback:', err);
+      setEquipment([
+        { id: 'item-1', name: 'Oxygen Concentrator 5L', category: 'Concentrator', price_per_day: 500, quantity_available: 3, vendor_id: 'vendor-1' },
+        { id: 'item-2', name: 'Standard Hospital Bed', category: 'Bed', price_per_day: 350, quantity_available: 2, vendor_id: 'vendor-1' },
+        { id: 'item-3', name: 'Foldable Wheelchair', category: 'Wheelchair', price_per_day: 150, quantity_available: 5, vendor_id: 'vendor-2' },
+        { id: 'item-4', name: 'CPAP Therapy Machine', category: 'CPAP', price_per_day: 800, quantity_available: 1, vendor_id: 'vendor-3' }
+      ]);
+    }
 
-      // 5. Fetch Hospitals
-      const { data: dbHospitals } = await supabase.from('hospital_cases').select('*');
-      if (dbHospitals) setHospitals(dbHospitals);
+    // 5. Fetch Vendors
+    try {
+      const { data: dbVendors, error } = await supabase.from('equipment_vendors').select('*');
+      if (error) throw error;
+      if (dbVendors && dbVendors.length > 0) {
+        setVendors(dbVendors);
+      } else {
+        throw new Error('No vendors found');
+      }
+    } catch (err) {
+      console.warn('Vendors DB fetch failed, using fallback:', err);
+      setVendors([
+        { id: 'vendor-1', name: 'Belgaum Medical Supplies', phone: '+919876543210', address: 'Nehru Nagar, Belgaum', rating: 4.8, latitude: 15.8610, longitude: 74.5090 },
+        { id: 'vendor-2', name: 'Crescent Rentals', phone: '+919988776655', address: 'Goaves Circle, Belgaum', rating: 4.5, latitude: 15.8420, longitude: 74.4980 }
+      ]);
+    }
 
-      // 6. Fetch Ambulances
-      const { data: dbAmbs } = await supabase.from('ambulances').select('*');
-      if (dbAmbs) setAmbulances(dbAmbs);
+    // 6. Fetch Hospitals
+    try {
+      const { data: dbHospitals, error } = await supabase.from('hospital_cases').select('*');
+      if (error) throw error;
+      if (dbHospitals && dbHospitals.length > 0) {
+        setHospitals(dbHospitals);
+      } else {
+        throw new Error('No hospitals found');
+      }
+    } catch (err) {
+      console.warn('Hospitals DB fetch failed, using fallback:', err);
+      setHospitals([
+        { id: 'hosp-1', name: 'KLES Prabhakar Kore Hospital', total_beds: 120, available_beds: 42, phone: '+919448112233', er_status: 'open' },
+        { id: 'hosp-2', name: 'BIMS District Hospital', total_beds: 200, available_beds: 15, phone: '+919876543211', er_status: 'open' }
+      ]);
+    }
 
-      // 7. Fetch Consultations
-      const { data: dbConsults } = await supabase.from('consultations').select('*').order('created_at', { ascending: false });
+    // 7. Fetch Ambulances
+    try {
+      const { data: dbAmbs, error } = await supabase.from('ambulances').select('*');
+      if (error) throw error;
+      if (dbAmbs && dbAmbs.length > 0) {
+        setAmbulances(dbAmbs);
+      } else {
+        throw new Error('No ambulances found');
+      }
+    } catch (err) {
+      console.warn('Ambulances DB fetch failed, using fallback:', err);
+      setAmbulances([
+        { id: 'amb-1', driver_name: 'Ramesh Patil', phone: '+919888877777', vehicle_number: 'KA-22-M-1234', status: 'available', type: 'bls', latitude: 15.8497, longitude: 74.4977 },
+        { id: 'amb-2', driver_name: 'Suresh Gowda', phone: '+919777766666', vehicle_number: 'KA-22-M-5678', status: 'available', type: 'als', latitude: 15.8520, longitude: 74.5030 }
+      ]);
+    }
+
+    // 8. Fetch Consultations
+    try {
+      const { data: dbConsults, error } = await supabase.from('consultations').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
       if (dbConsults) {
         setConsultations(dbConsults);
-      } else {
-        setConsultations([
-          { id: 'c-1', doctor_name: 'Dr. James Wilson', patient_name: 'Patient Mansi', status: 'pending', created_at: new Date().toISOString() }
-        ]);
       }
-
-      setIsDbOnline(true);
     } catch (err) {
-      console.warn('DB error, using fallback configurations:', err);
+      console.warn('Consultations DB fetch failed, using fallback:', err);
       setConsultations([
         { id: 'c-1', doctor_name: 'Dr. James Wilson', patient_name: 'Patient Mansi', status: 'pending', created_at: new Date().toISOString() }
       ]);
-      setIsDbOnline(false);
     }
   };
 
@@ -219,18 +313,22 @@ export default function AdminDashboardPage() {
   // Update order status trigger
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
-      await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+      if (usingFallback) {
+        throw new Error('Fallback mode enabled');
+      }
+      const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+      if (error) throw error;
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-      
+    } catch (err) {
+      console.warn('DB update failed, using localStorage fallback:', err);
       // Sync in localStorage orders if fallback exists
       const localOrders = localStorage.getItem('resq-medicine-orders');
       if (localOrders) {
         const parsed = JSON.parse(localOrders);
         const updated = parsed.map((o: any) => o.id === orderId ? { ...o, status: newStatus } : o);
         localStorage.setItem('resq-medicine-orders', JSON.stringify(updated));
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
       }
-    } catch (err) {
-      console.error('Error updating status:', err);
     }
   };
 
@@ -419,10 +517,147 @@ export default function AdminDashboardPage() {
           longitude: 74.4977
         });
         if (!error) loadAllAdminData();
+      } else if (formType === 'medicine') {
+        const priceNum = parseFloat(medPrice) || 0;
+        const stockInt = parseInt(medStock) || 0;
+        const imgUrl = medImageUrl || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=200';
+
+        if (editingMedId) {
+          if (usingFallback) {
+            const localMedsStr = localStorage.getItem('resq-registered-medicines') || '[]';
+            const localMedsList = JSON.parse(localMedsStr);
+            const updated = localMedsList.map((m: any) => 
+              m.id === editingMedId 
+                ? { ...m, medicine_name: medName, category: medCategory, description: medDescription, price: priceNum, stock: stockInt, is_available: medAvailable, image_url: imgUrl }
+                : m
+            );
+            localStorage.setItem('resq-registered-medicines', JSON.stringify(updated));
+            loadAllAdminData();
+          } else {
+            const { error } = await supabase.from('medicines').update({
+              medicine_name: medName,
+              category: medCategory,
+              description: medDescription,
+              price: priceNum,
+              stock: stockInt,
+              is_available: medAvailable,
+              image_url: imgUrl
+            }).eq('id', editingMedId);
+
+            if (!error) loadAllAdminData();
+          }
+        } else {
+          if (usingFallback) {
+            const localMedsStr = localStorage.getItem('resq-registered-medicines') || '[]';
+            const localMedsList = JSON.parse(localMedsStr);
+            const newMed = {
+              id: 'm-' + Math.random().toString(36).substr(2, 9),
+              medicine_name: medName,
+              category: medCategory,
+              description: medDescription,
+              price: priceNum,
+              stock: stockInt,
+              is_available: medAvailable,
+              image_url: imgUrl
+            };
+            localMedsList.push(newMed);
+            localStorage.setItem('resq-registered-medicines', JSON.stringify(localMedsList));
+            loadAllAdminData();
+          } else {
+            const { error } = await supabase.from('medicines').insert({
+              medicine_name: medName,
+              category: medCategory,
+              description: medDescription,
+              price: priceNum,
+              stock: stockInt,
+              is_available: medAvailable,
+              image_url: imgUrl
+            });
+
+            if (!error) loadAllAdminData();
+          }
+        }
+        
+        // Reset state
+        setMedName('');
+        setMedCategory('Pain Relief');
+        setMedDescription('');
+        setMedPrice('');
+        setMedStock('');
+        setMedImageUrl('');
+        setMedAvailable(true);
+        setEditingMedId(null);
       }
       setShowAddForm(false);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Medicine catalog management helper calls
+  const handleEditMedicineTrigger = (med: any) => {
+    setEditingMedId(med.id);
+    setMedName(med.medicine_name);
+    setMedCategory(med.category);
+    setMedDescription(med.description || '');
+    setMedPrice(med.price.toString());
+    setMedStock(med.stock.toString());
+    setMedImageUrl(med.image_url || '');
+    setMedAvailable(med.is_available);
+    setFormType('medicine');
+    setShowAddForm(true);
+  };
+
+  const handleDeleteMedicine = async (id: string) => {
+    if (usingFallback) {
+      const localMedsStr = localStorage.getItem('resq-registered-medicines') || '[]';
+      const localMedsList = JSON.parse(localMedsStr);
+      const filtered = localMedsList.filter((m: any) => m.id !== id);
+      localStorage.setItem('resq-registered-medicines', JSON.stringify(filtered));
+      loadAllAdminData();
+    } else {
+      const { error } = await supabase.from('medicines').delete().eq('id', id);
+      if (!error) loadAllAdminData();
+    }
+  };
+
+  const handleUpdateMedicineStock = async (id: string, newStock: number) => {
+    if (usingFallback) {
+      const localMedsStr = localStorage.getItem('resq-registered-medicines') || '[]';
+      const localMedsList = JSON.parse(localMedsStr);
+      const updated = localMedsList.map((m: any) => m.id === id ? { ...m, stock: newStock, is_available: newStock > 0 } : m);
+      localStorage.setItem('resq-registered-medicines', JSON.stringify(updated));
+      loadAllAdminData();
+    } else {
+      const { error } = await supabase.from('medicines').update({ stock: newStock, is_available: newStock > 0 }).eq('id', id);
+      if (!error) loadAllAdminData();
+    }
+  };
+
+  const handleUpdateMedicinePrice = async (id: string, newPrice: number) => {
+    if (usingFallback) {
+      const localMedsStr = localStorage.getItem('resq-registered-medicines') || '[]';
+      const localMedsList = JSON.parse(localMedsStr);
+      const updated = localMedsList.map((m: any) => m.id === id ? { ...m, price: newPrice } : m);
+      localStorage.setItem('resq-registered-medicines', JSON.stringify(updated));
+      loadAllAdminData();
+    } else {
+      const { error } = await supabase.from('medicines').update({ price: newPrice }).eq('id', id);
+      if (!error) loadAllAdminData();
+    }
+  };
+
+  const handleToggleMedicineAvailability = async (id: string, currentlyAvailable: boolean) => {
+    const nextVal = !currentlyAvailable;
+    if (usingFallback) {
+      const localMedsStr = localStorage.getItem('resq-registered-medicines') || '[]';
+      const localMedsList = JSON.parse(localMedsStr);
+      const updated = localMedsList.map((m: any) => m.id === id ? { ...m, is_available: nextVal } : m);
+      localStorage.setItem('resq-registered-medicines', JSON.stringify(updated));
+      loadAllAdminData();
+    } else {
+      const { error } = await supabase.from('medicines').update({ is_available: nextVal }).eq('id', id);
+      if (!error) loadAllAdminData();
     }
   };
 
@@ -548,6 +783,23 @@ export default function AdminDashboardPage() {
             >
               <Plus className="w-3.5 h-3.5" /> Add Equipment
             </button>
+            <button
+              onClick={() => {
+                setFormType('medicine');
+                setEditingMedId(null);
+                setMedName('');
+                setMedCategory('Pain Relief');
+                setMedDescription('');
+                setMedPrice('');
+                setMedStock('');
+                setMedImageUrl('');
+                setMedAvailable(true);
+                setShowAddForm(true);
+              }}
+              className="btn-secondary !h-10 px-4 text-xs flex items-center gap-1.5 rounded-full bg-medical text-white border-none hover:bg-medical-dark"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Medicine
+            </button>
           </div>
         </div>
 
@@ -563,6 +815,7 @@ export default function AdminDashboardPage() {
               {[
                 { id: 'analytics', icon: BarChart3, label: 'Control Analytics' },
                 { id: 'orders', icon: Package, label: 'Medicine Orders' },
+                { id: 'pharmacy-inventory', icon: Store, label: 'Pharmacy Inventory' },
                 { id: 'doctors', icon: Stethoscope, label: 'Doctor Listings' },
                 { id: 'equipment', icon: Truck, label: 'Rentals Equipment' },
                 { id: 'pharmacies', icon: Store, label: 'Participating Vendors' },
@@ -698,7 +951,9 @@ export default function AdminDashboardPage() {
                       <tr className="bg-surface/50 border-b border-border text-[10px] font-bold text-text-secondary uppercase tracking-wider">
                         <th className="py-3 px-5">Order ID</th>
                         <th className="py-3 px-5">Customer Email</th>
+                        <th className="py-3 px-5">Ordered Items</th>
                         <th className="py-3 px-5">Total Cost</th>
+                        <th className="py-3 px-5">Date</th>
                         <th className="py-3 px-5 text-center">Status</th>
                         <th className="py-3 px-5 text-center">Change Status</th>
                       </tr>
@@ -706,28 +961,35 @@ export default function AdminDashboardPage() {
                     <tbody>
                       {orders.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="py-12 text-center text-text-secondary text-xs">
-                            No active orders placed yet. Place medicine requests on the Medicine Finder page.
+                          <td colSpan={7} className="py-12 text-center text-text-secondary text-xs">
+                            No active orders placed yet. Place medicine requests on the Pharmacy page.
                           </td>
                         </tr>
                       ) : (
                         orders.map((o) => (
                           <tr key={o.id} className="border-b border-border/40 hover:bg-surface/30">
                             <td className="py-3 px-5 font-mono text-xs text-text-primary font-bold">
-                              #{o.id.substring(0,8)}
+                              {o.order_number || o.id.substring(0,8)}
                             </td>
                             <td className="py-3 px-5 text-xs text-text-secondary">
                               {o.user_email}
                             </td>
+                            <td className="py-3 px-5 text-xs font-bold text-text-primary">
+                              {o.order_items ? o.order_items.map((item: any) => `${item.medicine_name} (${item.quantity})`).join(', ') : 'No items'}
+                            </td>
                             <td className="py-3 px-5 text-xs font-bold text-medical font-mono">
                               ₹{o.total}
                             </td>
+                            <td className="py-3 px-5 text-xs text-text-secondary font-mono">
+                              {new Date(o.created_at).toLocaleDateString()}
+                            </td>
                             <td className="py-3 px-5 text-center">
                               <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${
-                                o.status === 'Pending' ? 'bg-amber-50 text-urgent border border-amber-200' :
-                                o.status === 'Accepted' ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' :
-                                o.status === 'Delivered' ? 'bg-green-50 text-stable border border-green-200' :
-                                'bg-blue-50 text-medical border border-blue-200'
+                                o.status === 'Placed' ? 'bg-amber-50 text-urgent border border-amber-200' :
+                                o.status === 'Confirmed' ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' :
+                                o.status === 'Preparing' ? 'bg-blue-50 text-medical border border-blue-200' :
+                                o.status === 'Out for Delivery' ? 'bg-purple-50 text-purple-600 border border-purple-200' :
+                                'bg-green-50 text-stable border border-green-200'
                               }`}>
                                 {o.status}
                               </span>
@@ -738,10 +1000,126 @@ export default function AdminDashboardPage() {
                                 onChange={(e) => handleUpdateOrderStatus(o.id, e.target.value)}
                                 className="text-xs bg-surface border border-border rounded-lg py-1 px-2 font-bold focus:outline-none cursor-pointer"
                               >
-                                {['Pending', 'Accepted', 'Packed', 'Out For Delivery', 'Delivered'].map((status) => (
+                                {['Placed', 'Confirmed', 'Preparing', 'Out for Delivery', 'Delivered'].map((status) => (
                                   <option key={status} value={status}>{status}</option>
                                 ))}
                               </select>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: PHARMACY INVENTORY */}
+            {activeTab === 'pharmacy-inventory' && (
+              <div className="card border border-border overflow-hidden">
+                <div className="p-4 border-b border-border bg-surface flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-text-primary">Pharmacy Inventory Catalog</h3>
+                  <span className="text-[10px] text-text-secondary font-semibold">
+                    Total Products: {medicines.length}
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-surface/50 border-b border-border text-[10px] font-bold text-text-secondary uppercase tracking-wider">
+                        <th className="py-3 px-5">Medicine</th>
+                        <th className="py-3 px-5">Category</th>
+                        <th className="py-3 px-5 text-center">Price</th>
+                        <th className="py-3 px-5 text-center">Stock</th>
+                        <th className="py-3 px-5 text-center">Status</th>
+                        <th className="py-3 px-5 text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {medicines.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-12 text-center text-text-secondary text-xs">
+                            No medicines added to the catalog yet. Use "Add Medicine" to list one.
+                          </td>
+                        </tr>
+                      ) : (
+                        medicines.map((m) => (
+                          <tr key={m.id} className="border-b border-border/40 hover:bg-surface/30 text-xs">
+                            <td className="py-3 px-5">
+                              <div className="flex items-center gap-2.5">
+                                <img 
+                                  src={m.image_url || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=200'} 
+                                  alt={m.medicine_name} 
+                                  className="w-8 h-8 rounded-lg object-cover border border-border"
+                                />
+                                <div>
+                                  <div className="font-bold text-text-primary">{m.medicine_name}</div>
+                                  <div className="text-[10px] text-text-muted mt-0.5 max-w-xs truncate">
+                                    {m.description || 'No description provided.'}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-5 text-text-secondary">
+                              {m.category}
+                            </td>
+                            <td className="py-3 px-5 text-center">
+                              <input
+                                type="number"
+                                value={m.price}
+                                step="1"
+                                onChange={(e) => handleUpdateMedicinePrice(m.id, parseFloat(e.target.value) || 0)}
+                                className="w-16 h-7 text-center font-mono border border-border bg-background rounded-lg text-text-primary focus:outline-none focus:border-medical"
+                              />
+                            </td>
+                            <td className="py-3 px-5 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  onClick={() => handleUpdateMedicineStock(m.id, Math.max(0, m.stock - 1))}
+                                  className="w-6 h-6 rounded-md bg-surface border border-border flex items-center justify-center font-bold text-xs"
+                                >
+                                  -
+                                </button>
+                                <span className="w-8 font-bold font-mono text-center">
+                                  {m.stock}
+                                </span>
+                                <button
+                                  onClick={() => handleUpdateMedicineStock(m.id, m.stock + 1)}
+                                  className="w-6 h-6 rounded-md bg-surface border border-border flex items-center justify-center font-bold text-xs"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-3 px-5 text-center">
+                              <button
+                                onClick={() => handleToggleMedicineAvailability(m.id, m.is_available)}
+                                className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border ${
+                                  m.is_available 
+                                    ? 'bg-green-50 text-stable border-green-200' 
+                                    : 'bg-red-50 text-emergency border-red-200'
+                                }`}
+                              >
+                                {m.is_available ? 'Available' : 'Disabled'}
+                              </button>
+                            </td>
+                            <td className="py-3 px-5 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  onClick={() => handleEditMedicineTrigger(m)}
+                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-text-secondary transition-all"
+                                  title="Edit"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteMedicine(m.id)}
+                                  className="p-1.5 rounded-lg bg-red-50 hover:bg-emergency-soft text-emergency transition-all"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -1023,6 +1401,45 @@ export default function AdminDashboardPage() {
                       <label className="block text-[10px] font-bold text-text-secondary mb-1 uppercase">Quantity</label>
                       <input type="number" required value={eqQty} onChange={e => setEqQty(e.target.value)} className="input-field" />
                     </div>
+                  </div>
+                </>
+              )}
+
+              {formType === 'medicine' && (
+                <>
+                  <div>
+                    <label className="block text-[10px] font-bold text-text-secondary mb-1 uppercase">Medicine Name</label>
+                    <input type="text" required value={medName} onChange={e => setMedName(e.target.value)} placeholder="Paracetamol 650mg" className="input-field text-xs font-normal" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-text-secondary mb-1 uppercase">Category</label>
+                    <select value={medCategory} onChange={e => setMedCategory(e.target.value)} className="input-field text-xs font-bold cursor-pointer">
+                      {['Pain Relief', 'Cold & Allergy', 'First Aid', 'Digestive Care', 'Other'].map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-text-secondary mb-1 uppercase">Description</label>
+                    <textarea value={medDescription} onChange={e => setMedDescription(e.target.value)} placeholder="Provide short descriptions..." className="input-field text-xs font-normal h-16 min-h-16 resize-none" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-text-secondary mb-1 uppercase">Price (₹)</label>
+                      <input type="number" required value={medPrice} onChange={e => setMedPrice(e.target.value)} className="input-field text-xs font-mono font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-text-secondary mb-1 uppercase">Stock Qty</label>
+                      <input type="number" required value={medStock} onChange={e => setMedStock(e.target.value)} className="input-field text-xs font-mono font-bold" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-text-secondary mb-1 uppercase">Image URL</label>
+                    <input type="url" value={medImageUrl} onChange={e => setMedImageUrl(e.target.value)} placeholder="https://..." className="input-field text-xs font-normal" />
+                  </div>
+                  <div className="flex items-center gap-2 py-1">
+                    <input type="checkbox" id="med-avail" checked={medAvailable} onChange={e => setMedAvailable(e.target.checked)} className="w-4 h-4 text-medical rounded" />
+                    <label htmlFor="med-avail" className="text-xs font-bold text-text-primary select-none cursor-pointer">Available for Ordering</label>
                   </div>
                 </>
               )}

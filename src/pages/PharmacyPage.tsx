@@ -1,149 +1,122 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Store, Search, Phone, MapPin, Activity, CheckCircle2, 
-  Compass, ShieldAlert, Clock, Plus, Trash2, Edit, X, 
-  ExternalLink, MessageSquare, AlertCircle, ShoppingBag
+  Store, Search, Activity, CheckCircle2, 
+  ShieldAlert, ShoppingCart, Plus, Minus, Trash2, X, 
+  Printer, ClipboardList, Package, ArrowRight, HeartPulse
 } from 'lucide-react';
 import NavigationBar from '@/components/Navigation';
 import { supabase } from '@/lib/supabase';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
-// Haversine formula to compute distance between coordinates in Kilometers
-function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+interface CartItem {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  quantity: number;
+  stock: number;
 }
 
-// Custom Leaflet Icons
-const userIcon = L.divIcon({
-  className: 'custom-user-marker',
-  html: `
-    <div style="position: relative; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
-      <div style="position: absolute; width: 24px; height: 24px; background: rgba(10, 132, 255, 0.4); border-radius: 50%; animation: ringPulse 2s ease-out infinite;"></div>
-      <div style="position: absolute; width: 12px; height: 12px; background: #0A84FF; border: 2px solid white; border-radius: 50%;"></div>
-    </div>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-});
-
-const storeIcon = L.divIcon({
-  className: 'custom-store-marker',
-  html: `
-    <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-      <div style="position: absolute; width: 12px; height: 4px; border-radius: 50%; bottom: 0; left: 10px; background: rgba(0,0,0,0.2); transform: scaleX(1.5);"></div>
-      <div style="color: #30D158; position: absolute; top: 0; cursor: pointer;">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="28" height="28" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-        </svg>
-      </div>
-    </div>
-  `,
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-});
-
-// Mock Fallback Data (used if Supabase query fails or tables are missing)
-const MOCK_STORES = [
-  { id: 'store-1', name: 'Belgaum Drug House', phone: '+919876543210', latitude: 15.8520, longitude: 74.5030, address: 'Maratha Mandir Road, Belgaum, Karnataka' },
-  { id: 'store-2', name: 'KLES Pharmacy', phone: '+919988776655', latitude: 15.8610, longitude: 74.5090, address: 'Nehru Nagar, Belgaum, Karnataka' },
-  { id: 'store-3', name: 'Goaves Wellness Pharmacy', phone: '+919448112233', latitude: 15.8420, longitude: 74.4980, address: 'Goaves Circle, Belgaum, Karnataka' },
-];
-
-const MOCK_MEDICINES = [
-  { id: 'med-1', store_id: 'store-1', medicine_name: 'Paracetamol 650', price: 15.0, stock: 50, is_available: true },
-  { id: 'med-2', store_id: 'store-1', medicine_name: 'Sterile Gauze', price: 25.0, stock: 100, is_available: true },
-  { id: 'med-3', store_id: 'store-1', medicine_name: 'Antiseptic Solution', price: 75.0, stock: 30, is_available: true },
-  { id: 'med-4', store_id: 'store-1', medicine_name: 'Adhesive Bandages', price: 5.0, stock: 200, is_available: true },
-  { id: 'med-5', store_id: 'store-1', medicine_name: 'Pain Relief Spray', price: 110.0, stock: 0, is_available: false },
-
-  { id: 'med-6', store_id: 'store-2', medicine_name: 'Paracetamol 650', price: 16.5, stock: 80, is_available: true },
-  { id: 'med-7', store_id: 'store-2', medicine_name: 'Sterile Gauze', price: 30.0, stock: 150, is_available: true },
-  { id: 'med-8', store_id: 'store-2', medicine_name: 'Antiseptic Solution', price: 85.0, stock: 50, is_available: true },
-  { id: 'med-9', store_id: 'store-2', medicine_name: 'Adhesive Bandages', price: 4.5, stock: 400, is_available: true },
-  { id: 'med-10', store_id: 'store-2', medicine_name: 'Burn Ointment', price: 60.0, stock: 25, is_available: true },
-
-  { id: 'med-11', store_id: 'store-3', medicine_name: 'Paracetamol 650', price: 14.0, stock: 20, is_available: true },
-  { id: 'med-12', store_id: 'store-3', medicine_name: 'Sterile Gauze', price: 28.0, stock: 60, is_available: true },
-  { id: 'med-13', store_id: 'store-3', medicine_name: 'Antiseptic Solution', price: 80.0, stock: 15, is_available: true },
-  { id: 'med-14', store_id: 'store-3', medicine_name: 'Adhesive Bandages', price: 6.0, stock: 100, is_available: true },
-  { id: 'med-15', store_id: 'store-3', medicine_name: 'Pain Relief Spray', price: 125.0, stock: 12, is_available: true },
-];
+const CATEGORIES = ['All', 'Pain Relief', 'Cold & Allergy', 'First Aid', 'Digestive Care', 'Other'];
 
 export default function PharmacyPage() {
-  const [activeTab, setActiveTab] = useState<'search' | 'dashboard'>('search');
+  const navigate = useNavigate();
+  const userEmail = localStorage.getItem('resq-active-user-email') || '';
+
+  // Tab State
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'my-orders'>('marketplace');
+
+  // Search & Categories state
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
   // Database vs Local fallback states
-  const [stores, setStores] = useState<any[]>(MOCK_STORES);
-  const [medicines, setMedicines] = useState<any[]>(MOCK_MEDICINES);
+  const [medicines, setMedicines] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [usingFallback, setUsingFallback] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // User location baseline: Belgaum center
-  const defaultUserLocation = { lat: 15.8497, lng: 74.4977 };
-  const [userLocation] = useState(defaultUserLocation);
+  // Cart state
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [showCart, setShowCart] = useState(false);
 
-  // Dashboard Owner Management States
-  const [selectedStoreId, setSelectedStoreId] = useState('store-1');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newMedName, setNewMedName] = useState('');
-  const [newMedPrice, setNewMedPrice] = useState('');
-  const [newMedStock, setNewMedStock] = useState('');
-  const [newMedAvailable, setNewMedAvailable] = useState(true);
-  const [editingMedId, setEditingMedId] = useState<string | null>(null);
+  // Checkout modal
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
-  // Reservation Modal popup state
-  const [reservedMed, setReservedMed] = useState<{ medName: string; storeName: string } | null>(null);
+  // Bill display modal/view
+  const [activeBillOrder, setActiveBillOrder] = useState<any | null>(null);
 
-  // Map references
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
+  // Selected quantities on cards
+  const [cardQuantities, setCardQuantities] = useState<Record<string, number>>({});
 
-  // Initial URL query parameter check (for triage page integrations)
+  // Real-time listener reference
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get('q');
-    if (q) {
-      setSearchQuery(q);
+    loadData();
+
+    // Setup Supabase real-time updates for medicines and orders
+    const medicinesChannel = supabase
+      .channel('pharmacy-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'medicines' }, () => {
+        loadData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        loadData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(medicinesChannel);
+    };
+  }, []);
+
+  // Sync cart from local storage on load
+  useEffect(() => {
+    const savedCart = localStorage.getItem('resq-pharmacy-cart');
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch (err) {
+        console.error('Failed to parse cart:', err);
+      }
     }
   }, []);
 
-  // Load stores and medicines data
+  const saveCart = (updatedCart: CartItem[]) => {
+    setCart(updatedCart);
+    localStorage.setItem('resq-pharmacy-cart', JSON.stringify(updatedCart));
+  };
+
   const loadData = async () => {
-    let currentStores = MOCK_STORES;
-    let currentMeds = MOCK_MEDICINES;
+    setLoading(true);
+    let currentMeds: any[] = [];
+    let currentOrders: any[] = [];
     let isDbOnline = false;
 
     try {
-      const { data: dbStores, error: storesErr } = await supabase.from('medical_stores').select('*');
-      const { data: dbMeds, error: medsErr } = await supabase.from('medicines').select('*');
+      const { data: dbMeds, error: medsErr } = await supabase
+        .from('medicines')
+        .select('*')
+        .order('medicine_name', { ascending: true });
+      if (medsErr) throw medsErr;
 
-      if (!storesErr && !medsErr && dbStores && dbMeds && dbStores.length > 0) {
-        currentStores = dbStores;
+      const { data: dbOrders, error: ordersErr } = await supabase
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('user_email', userEmail.trim().toLowerCase())
+        .order('created_at', { ascending: false });
+      if (ordersErr) throw ordersErr;
+
+      if (dbMeds) {
         currentMeds = dbMeds;
         isDbOnline = true;
       }
+      if (dbOrders) {
+        currentOrders = dbOrders;
+      }
     } catch (err) {
-      console.warn('Supabase offline or table missing, using fallbacks:', err);
-    }
-
-    // Merge registered stores from localStorage
-    const localStores = localStorage.getItem('resq-registered-stores');
-    if (localStores) {
-      const parsedStores = JSON.parse(localStores);
-      currentStores = [...currentStores, ...parsedStores];
+      console.warn('Database query failed, using mock data:', err);
     }
 
     // Merge registered medicines from localStorage
@@ -151,705 +124,854 @@ export default function PharmacyPage() {
     if (localMeds) {
       const parsedMeds = JSON.parse(localMeds);
       currentMeds = [...currentMeds, ...parsedMeds];
+    } else if (!isDbOnline || currentMeds.length === 0) {
+      // Fallback Seed mock medicines
+      const defaultMeds = [
+        { id: 'm-1', medicine_name: 'Paracetamol 650mg', category: 'Pain Relief', description: 'Relieves mild to moderate pain and reduces fever.', price: 15.00, stock: 50, is_available: true, image_url: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&q=80&w=200' },
+        { id: 'm-2', medicine_name: 'Cetirizine 10mg', category: 'Cold & Allergy', description: 'Provides relief from runny nose, sneezing, and hives.', price: 20.00, stock: 30, is_available: true, image_url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=200' },
+        { id: 'm-3', medicine_name: 'ORS Oral Rehydration Salts', category: 'Digestive Care', description: 'Restores essential body fluids and electrolytes.', price: 25.00, stock: 5, is_available: true, image_url: 'https://images.unsplash.com/photo-1607619056574-7b8f304b3c93?auto=format&fit=crop&q=80&w=200' },
+        { id: 'm-4', medicine_name: 'Antiseptic Dettol', category: 'First Aid', description: 'Protects against infection from cuts, scratches, and insect bites.', price: 80.00, stock: 15, is_available: true, image_url: 'https://images.unsplash.com/photo-1603398938378-e54eab446dde?auto=format&fit=crop&q=80&w=200' },
+        { id: 'm-5', medicine_name: 'Pain Relief Gel', category: 'Pain Relief', description: 'Fast-acting topical gel for muscle ache and joint stiffness.', price: 120.00, stock: 0, is_available: false, image_url: 'https://images.unsplash.com/photo-1550572017-edd951b55104?auto=format&fit=crop&q=80&w=200' }
+      ];
+      currentMeds = defaultMeds;
+      localStorage.setItem('resq-registered-medicines', JSON.stringify(defaultMeds));
     }
 
-    setStores(currentStores);
+    // Merge registered orders from localStorage
+    const localOrders = localStorage.getItem('resq-medicine-orders');
+    if (localOrders) {
+      const parsedOrders = JSON.parse(localOrders);
+      currentOrders = [...parsedOrders, ...currentOrders];
+    }
+
     setMedicines(currentMeds);
+    setOrders(currentOrders);
     setUsingFallback(!isDbOnline);
-
-    // Auto-select active logged in store if applicable
-    const activeStoreId = localStorage.getItem('resq-active-store-id');
-    if (activeStoreId && currentStores.find(s => s.id === activeStoreId)) {
-      setSelectedStoreId(activeStoreId);
-    } else if (currentStores.length > 0) {
-      setSelectedStoreId(currentStores[0].id);
-    }
+    setLoading(false);
   };
 
-  useEffect(() => {
-    loadData();
-
-    // Subscribe to medicines changes in real-time
-    const channel = supabase
-      .channel('medicines-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'medicines' }, () => {
-        loadData();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // Filter and compute pharmacy search results
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-
-    const matches = medicines.filter((m) =>
-      m.medicine_name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    return matches.map((m) => {
-      const store = stores.find((s) => s.id === m.store_id);
-      const distance = store
-        ? getHaversineDistance(userLocation.lat, userLocation.lng, store.latitude, store.longitude)
-        : 99.9;
-
-      return {
-        ...m,
-        storeName: store ? store.name : 'Unknown Store',
-        phone: store ? store.phone : '',
-        address: store ? store.address : '',
-        lat: store ? store.latitude : 0,
-        lng: store ? store.longitude : 0,
-        calculatedDistance: parseFloat(distance.toFixed(1)),
-      };
-    }).sort((a, b) => a.calculatedDistance - b.calculatedDistance);
-  }, [searchQuery, medicines, stores, userLocation]);
-
-  // Leaflet Map Initialization
-  useEffect(() => {
-    if (activeTab !== 'search' || !mapRef.current) return;
-
-    // Destroy existing instance
-    if (mapInstance.current) {
-      mapInstance.current.remove();
-      mapInstance.current = null;
-    }
-
-    mapInstance.current = L.map(mapRef.current, {
-      zoomControl: false,
-      attributionControl: false,
-    }).setView([userLocation.lat, userLocation.lng], 13);
-
-    // Apply CartoDB light map tiles layer
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-    }).addTo(mapInstance.current);
-
-    // Zoom controls bottom right
-    L.control.zoom({ position: 'bottomright' }).addTo(mapInstance.current);
-
-    // User Location Marker
-    L.marker([userLocation.lat, userLocation.lng], { icon: userIcon })
-      .addTo(mapInstance.current)
-      .bindPopup('<b>Your Location</b>', { closeButton: false });
-
-    return () => {
-      if (mapInstance.current) {
-        mapInstance.current.remove();
-        mapInstance.current = null;
-      }
-    };
-  }, [activeTab]);
-
-  // Update map markers when search results change
-  useEffect(() => {
-    if (activeTab !== 'search' || !mapInstance.current) return;
-
-    // Clear existing markers
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
-
-    // Pin stores matching the searched medicine
-    const pinnedStoreIds = new Set<string>();
-
-    searchResults.forEach((item) => {
-      if (pinnedStoreIds.has(item.store_id)) return;
-      pinnedStoreIds.add(item.store_id);
-
-      if (item.lat && item.lng && mapInstance.current) {
-        const marker = L.marker([item.lat, item.lng], { icon: storeIcon })
-          .addTo(mapInstance.current)
-          .bindPopup(
-            `<b>${item.storeName}</b><br/>${item.medicine_name}: ₹${item.price}<br/>${
-              item.stock > 0 ? '🟢 In Stock' : '🔴 Out of Stock'
-            }`,
-            { closeButton: false }
-          );
-        markersRef.current.push(marker);
-      }
+  // Filter medicines
+  const filteredMedicines = useMemo(() => {
+    return medicines.filter((m) => {
+      const matchesSearch = m.medicine_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            (m.description && m.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesCategory = selectedCategory === 'All' || m.category === selectedCategory;
+      return matchesSearch && matchesCategory;
     });
+  }, [medicines, searchQuery, selectedCategory]);
 
-    // If search results exist, fit map bounds to show results
-    if (searchResults.length > 0 && mapInstance.current) {
-      const coords = searchResults.map((r) => [r.lat, r.lng] as [number, number]);
-      coords.push([userLocation.lat, userLocation.lng]);
-      const bounds = L.latLngBounds(coords);
-      mapInstance.current.fitBounds(bounds, { padding: [40, 40] });
-    }
-  }, [searchResults, activeTab]);
-
-  // Dashboard Owner Management CRUD triggers
-  const dashboardMedicines = useMemo(() => {
-    return medicines.filter((m) => m.store_id === selectedStoreId);
-  }, [medicines, selectedStoreId]);
-
-  const handleAddMedicine = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMedName.trim() || !newMedPrice || !newMedStock) return;
-
-    const priceNum = parseFloat(newMedPrice);
-    const stockInt = parseInt(newMedStock);
-
-    if (usingFallback) {
-      // Mock Fallback creation
-      const mockId = `mock-med-${Date.now()}`;
-      const newMockItem = {
-        id: mockId,
-        store_id: selectedStoreId,
-        medicine_name: newMedName.trim(),
-        price: priceNum,
-        stock: stockInt,
-        is_available: newMedAvailable,
-      };
-      setMedicines((prev) => [...prev, newMockItem]);
-    } else {
-      // Supabase database insert
-      try {
-        await supabase.from('medicines').insert({
-          store_id: selectedStoreId,
-          medicine_name: newMedName.trim(),
-          price: priceNum,
-          stock: stockInt,
-          is_available: newMedAvailable,
-        });
-        loadData();
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    // Reset Form
-    setNewMedName('');
-    setNewMedPrice('');
-    setNewMedStock('');
-    setNewMedAvailable(true);
-    setShowAddForm(false);
+  // Cart operations
+  const getCardQty = (medId: string) => cardQuantities[medId] || 1;
+  const setCardQty = (medId: string, val: number) => {
+    setCardQuantities(prev => ({ ...prev, [medId]: val }));
   };
 
-  const handleUpdateStock = async (id: string, newStock: number) => {
-    const isAvail = newStock > 0;
-    if (usingFallback) {
-      setMedicines((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, stock: newStock, is_available: isAvail } : m))
-      );
-    } else {
-      try {
-        await supabase.from('medicines').update({ stock: newStock, is_available: isAvail }).eq('id', id);
-        loadData();
-      } catch (err) {
-        console.error(err);
+  const handleAddToCart = (med: any) => {
+    const qty = getCardQty(med.id);
+    if (med.stock === 0) return;
+
+    if (qty > med.stock) {
+      alert(`Only ${med.stock} units are available.`);
+      return;
+    }
+
+    const existing = cart.find(c => c.id === med.id);
+    let newCart: CartItem[] = [];
+
+    if (existing) {
+      const newQty = existing.quantity + qty;
+      if (newQty > med.stock) {
+        alert(`Cannot add more. Only ${med.stock} units are available in total.`);
+        return;
       }
+      newCart = cart.map(c => c.id === med.id ? { ...c, quantity: newQty } : c);
+    } else {
+      newCart = [...cart, {
+        id: med.id,
+        name: med.medicine_name,
+        category: med.category,
+        price: med.price,
+        quantity: qty,
+        stock: med.stock
+      }];
+    }
+
+    saveCart(newCart);
+    // Reset quantity select
+    setCardQty(med.id, 1);
+    alert(`${med.medicine_name} added to cart!`);
+  };
+
+  const handleUpdateCartQty = (id: string, delta: number) => {
+    const item = cart.find(c => c.id === id);
+    if (!item) return;
+
+    const newQty = item.quantity + delta;
+    if (newQty <= 0) {
+      handleRemoveFromCart(id);
+      return;
+    }
+
+    if (newQty > item.stock) {
+      alert(`Only ${item.stock} units are available.`);
+      return;
+    }
+
+    const newCart = cart.map(c => c.id === id ? { ...c, quantity: newQty } : c);
+    saveCart(newCart);
+  };
+
+  const handleRemoveFromCart = (id: string) => {
+    const newCart = cart.filter(c => c.id !== id);
+    saveCart(newCart);
+  };
+
+  const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const deliveryFee = cartSubtotal > 0 ? 10 : 0;
+  const cartTotal = cartSubtotal + deliveryFee;
+
+  // Checkout process with database validations
+  const handlePlaceOrder = async () => {
+    if (cart.length === 0) return;
+    setIsPlacingOrder(true);
+
+    try {
+      const dbMedsToDecrement: { id: string; newStock: number }[] = [];
+      const validatedItems: any[] = [];
+
+      // Validate session role/auth
+      const currentEmail = userEmail || 'anonymous@resq.com';
+
+      // 1. Verify current stock in database
+      if (!usingFallback) {
+        for (const cartItem of cart) {
+          const { data: dbItem, error: fetchErr } = await supabase
+            .from('medicines')
+            .select('*')
+            .eq('id', cartItem.id)
+            .maybeSingle();
+
+          if (fetchErr || !dbItem) {
+            throw new Error(`Medicine "${cartItem.name}" is no longer available in the marketplace.`);
+          }
+
+          if (dbItem.stock < cartItem.quantity) {
+            throw new Error(`Only ${dbItem.stock} units of "${cartItem.name}" are available.`);
+          }
+
+          dbMedsToDecrement.push({
+            id: cartItem.id,
+            newStock: dbItem.stock - cartItem.quantity
+          });
+
+          validatedItems.push({
+            medicine_id: cartItem.id,
+            name: dbItem.medicine_name,
+            quantity: cartItem.quantity,
+            price: dbItem.price
+          });
+        }
+
+        // 2. Perform atomic stock decreases in Supabase
+        for (const dec of dbMedsToDecrement) {
+          const { error: updErr } = await supabase
+            .from('medicines')
+            .update({ stock: dec.newStock })
+            .eq('id', dec.id);
+
+          if (updErr) {
+            throw new Error(`Failed to update stock for medicine ID ${dec.id}.`);
+          }
+        }
+
+        // 3. Create order entry in database
+        const orderNum = 'RESQ-' + Math.floor(1000 + Math.random() * 9000);
+        const { data: newOrder, error: oErr } = await supabase
+          .from('orders')
+          .insert({
+            order_number: orderNum,
+            user_email: currentEmail.trim().toLowerCase(),
+            status: 'Placed',
+            subtotal: cartSubtotal,
+            delivery_charge: deliveryFee,
+            gst: 0,
+            total: cartTotal
+          })
+          .select()
+          .single();
+
+        if (oErr || !newOrder) throw oErr || new Error('Failed to create order.');
+
+        // 4. Create order items entries in database
+        for (const item of validatedItems) {
+          const { error: itemErr } = await supabase
+            .from('order_items')
+            .insert({
+              order_id: newOrder.id,
+              medicine_id: item.medicine_id,
+              medicine_name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              total_price: item.price * item.quantity
+            });
+
+          if (itemErr) console.warn('Failed to insert item log:', itemErr);
+        }
+
+        // Reload data from DB
+        await loadData();
+        const { data: orderDetails } = await supabase
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('id', newOrder.id)
+          .single();
+
+        setActiveBillOrder(orderDetails || newOrder);
+      } else {
+        // Fallback local registry flow
+        const localMedsStr = localStorage.getItem('resq-registered-medicines') || '[]';
+        const localMedsList = JSON.parse(localMedsStr);
+
+        for (const cartItem of cart) {
+          const dbItem = localMedsList.find((m: any) => m.id === cartItem.id);
+          if (!dbItem) {
+            throw new Error(`Medicine "${cartItem.name}" is no longer available.`);
+          }
+          if (dbItem.stock < cartItem.quantity) {
+            throw new Error(`Only ${dbItem.stock} units of "${cartItem.name}" are available.`);
+          }
+          dbItem.stock -= cartItem.quantity;
+          validatedItems.push({
+            medicine_id: cartItem.id,
+            name: dbItem.medicine_name,
+            quantity: cartItem.quantity,
+            price: dbItem.price
+          });
+        }
+
+        // Save updated local inventory
+        localStorage.setItem('resq-registered-medicines', JSON.stringify(localMedsList));
+
+        // Create local order
+        const orderNum = 'RESQ-' + Math.floor(1000 + Math.random() * 9000);
+        const newLocalOrder = {
+          id: 'o-' + Math.random().toString(36).substr(2, 9),
+          order_number: orderNum,
+          user_email: currentEmail.trim().toLowerCase(),
+          status: 'Placed',
+          subtotal: cartSubtotal,
+          delivery_charge: deliveryFee,
+          gst: 0,
+          total: cartTotal,
+          created_at: new Date().toISOString(),
+          order_items: validatedItems.map(item => ({
+            id: 'oi-' + Math.random().toString(36).substr(2, 9),
+            medicine_name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            total_price: item.price * item.quantity
+          }))
+        };
+
+        const existingLocalOrders = localStorage.getItem('resq-medicine-orders');
+        const ordersList = existingLocalOrders ? JSON.parse(existingLocalOrders) : [];
+        ordersList.unshift(newLocalOrder);
+        localStorage.setItem('resq-medicine-orders', JSON.stringify(ordersList));
+
+        await loadData();
+        setActiveBillOrder(newLocalOrder);
+      }
+
+      // Empty Cart
+      saveCart([]);
+      setShowCheckout(false);
+    } catch (err: any) {
+      alert(err.message || 'Failed to place order. Please review your stock settings.');
+    } finally {
+      setIsPlacingOrder(false);
     }
   };
 
-  const handleUpdatePrice = async (id: string, newPrice: number) => {
-    if (usingFallback) {
-      setMedicines((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, price: newPrice } : m))
-      );
-    } else {
-      try {
-        await supabase.from('medicines').update({ price: newPrice }).eq('id', id);
-        loadData();
-      } catch (err) {
-        console.error(err);
-      }
-    }
+  const getStockBadge = (stock: number) => {
+    if (stock > 10) return <span className="text-[10px] font-bold text-stable bg-green-50 px-2 py-0.5 rounded-full">🟢 In Stock</span>;
+    if (stock > 0) return <span className="text-[10px] font-bold text-urgent bg-amber-50 px-2 py-0.5 rounded-full">🟠 Low Stock</span>;
+    return <span className="text-[10px] font-bold text-emergency bg-red-50 px-2 py-0.5 rounded-full">🔴 Out of Stock</span>;
   };
 
-  const handleDeleteMedicine = async (id: string) => {
-    if (usingFallback) {
-      setMedicines((prev) => prev.filter((m) => m.id !== id));
-    } else {
-      try {
-        await supabase.from('medicines').delete().eq('id', id);
-        loadData();
-      } catch (err) {
-        console.error(err);
-      }
-    }
+  const getStatusLineClass = (orderStatus: string, step: string) => {
+    const steps = ['Placed', 'Confirmed', 'Preparing', 'Out for Delivery', 'Delivered'];
+    const currentIdx = steps.indexOf(orderStatus);
+    const stepIdx = steps.indexOf(step);
+
+    if (stepIdx <= currentIdx) return 'bg-medical text-medical';
+    return 'bg-border text-text-muted';
   };
 
   return (
-    <div className="min-h-screen bg-background pt-24 pb-16">
+    <div className="min-h-screen bg-background pt-24 pb-16 flex flex-col justify-between">
       <NavigationBar />
 
-      <div className="container-main max-w-5xl">
-        {/* Header Title Section */}
+      <div className="container-main max-w-5xl w-full mx-auto px-4">
+        {/* Banner Section */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-medical-soft text-medical mb-4">
             <Store className="w-4 h-4" />
-            <span className="text-sm font-semibold">ResQ Inventory Discovery</span>
+            <span className="text-sm font-semibold">ResQ Pharmacy</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-text-primary tracking-tight mb-3">
-            Nearby Medical Stores
+            ResQ Pharmacy
           </h1>
-          <p className="text-text-secondary max-w-xl mx-auto text-sm md:text-base">
-            Locate critical medicines and first-aid supplies in nearby pharmacies in real-time. Update store stock levels dynamically.
+          <p className="text-text-secondary max-w-xl mx-auto text-sm md:text-base font-normal">
+            Check medicine availability and order medicines easily.
           </p>
 
-          {/* Navigation/Toggles Tabs */}
-          {localStorage.getItem('resq-active-user-role') !== 'user' && (
-            <div className="flex justify-center gap-4 mt-6">
-              <button
-                onClick={() => setActiveTab('search')}
-                className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm ${
-                  activeTab === 'search'
-                    ? 'bg-medical text-white'
-                    : 'bg-surface border border-border/60 text-text-secondary hover:bg-surface-blue'
-                }`}
-              >
-                Search Medicines
-              </button>
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm ${
-                  activeTab === 'dashboard'
-                    ? 'bg-medical text-white'
-                    : 'bg-surface border border-border/60 text-text-secondary hover:bg-surface-blue'
-                }`}
-              >
-                Store Owner Dashboard
-              </button>
-            </div>
-          )}
+          {/* Tab Selection */}
+          <div className="flex justify-center gap-4 mt-6">
+            <button
+              onClick={() => setActiveTab('marketplace')}
+              className={`px-5 py-2.5 rounded-full font-bold text-xs transition-all shadow-sm flex items-center gap-2 ${
+                activeTab === 'marketplace'
+                  ? 'bg-medical text-white'
+                  : 'bg-surface border border-border/60 text-text-secondary hover:bg-surface-blue'
+              }`}
+            >
+              <Store className="w-3.5 h-3.5" /> Medicine Marketplace
+            </button>
+            <button
+              onClick={() => setActiveTab('my-orders')}
+              className={`px-5 py-2.5 rounded-full font-bold text-xs transition-all shadow-sm flex items-center gap-2 ${
+                activeTab === 'my-orders'
+                  ? 'bg-medical text-white'
+                  : 'bg-surface border border-border/60 text-text-secondary hover:bg-surface-blue'
+              }`}
+            >
+              <ClipboardList className="w-3.5 h-3.5" /> My Orders ({orders.length})
+            </button>
+          </div>
         </div>
 
-        {/* Tab 1: SEARCH & DISCOVERY */}
-        {activeTab === 'search' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column: Search & Pharmacy List */}
-            <div className="lg:col-span-1 flex flex-col gap-6">
-              
-              {/* Search Panel Card */}
-              <div className="card p-6">
-                <h3 className="text-lg font-bold text-text-primary mb-2 flex items-center gap-2">
-                  <Search className="w-5 h-5 text-medical" /> Find Supplies
-                </h3>
-                <p className="text-xs text-text-secondary mb-4">
-                  Search for a medicine (e.g. "Paracetamol 650" or "Gauze") to check local pharmacy stock.
-                </p>
-                <div className="relative">
-                  <Search className="w-4 h-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search medicines..."
-                    className="input-field pl-10"
-                  />
-                  {searchQuery && (
-                    <button 
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+        {/* Tab 1: Marketplace */}
+        {activeTab === 'marketplace' && (
+          <div className="space-y-6">
+            {/* Filter and Cart triggers row */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface p-4 rounded-2xl border border-border shadow-sm">
+              <div className="flex-1 relative">
+                <Search className="w-4 h-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search medicines..."
+                  className="input-field pl-10 text-xs"
+                />
+              </div>
 
-                {/* Quick search shortcuts */}
-                <div className="mt-4">
-                  <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block mb-2">
-                    Quick Search
+              {/* Category tabs */}
+              <div className="flex flex-wrap gap-1.5">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      selectedCategory === cat
+                        ? 'bg-text-primary text-background'
+                        : 'bg-background hover:bg-surface-blue border border-border/60 text-text-secondary'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {/* View Cart button */}
+              <button
+                onClick={() => setShowCart(true)}
+                className="btn-primary h-10 px-4 flex items-center justify-center gap-2 text-xs font-bold shrink-0 shadow-md relative"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span>Cart</span>
+                {cart.length > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-emergency text-white flex items-center justify-center text-[9px] font-bold border-2 border-background">
+                    {cart.reduce((sum, item) => sum + item.quantity, 0)}
                   </span>
-                  <div className="flex flex-wrap gap-2">
-                    {['Paracetamol 650', 'Sterile Gauze', 'Antiseptic Solution', 'Adhesive Bandages'].map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => setSearchQuery(m)}
-                        className="px-3 py-1 rounded-full bg-surface border border-border/60 hover:bg-surface-blue text-xs text-text-secondary transition-all"
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Stores Results List */}
-              <div className="flex-1 flex flex-col gap-3">
-                <h4 className="text-xs font-bold text-text-secondary uppercase tracking-wider px-2">
-                  Matching Pharmacies ({searchResults.length})
-                </h4>
-
-                {searchQuery.trim() === '' ? (
-                  <div className="card p-8 text-center text-text-secondary flex flex-col items-center justify-center">
-                    <ShoppingBag className="w-10 h-10 text-text-muted mb-3" />
-                    <p className="text-sm font-semibold">Enter a medicine name</p>
-                    <p className="text-xs text-text-muted mt-1">Start searching above to check stock levels near you.</p>
-                  </div>
-                ) : searchResults.length === 0 ? (
-                  <div className="card p-8 text-center text-text-secondary flex flex-col items-center justify-center border border-dashed border-border">
-                    <AlertCircle className="w-10 h-10 text-urgent mb-3" />
-                    <p className="text-sm font-semibold">Medicine Not Found</p>
-                    <p className="text-xs text-text-muted mt-1">No participating pharmacies have "{searchQuery}" listed.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 overflow-y-auto max-h-[500px] scrollbar-hide pr-1">
-                    {searchResults.map((item) => (
-                      <motion.div
-                        key={item.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="card p-5 border border-border/60 flex flex-col justify-between hover:shadow-sm transition-shadow"
-                      >
-                        <div>
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h5 className="font-bold text-text-primary text-base leading-snug">{item.storeName}</h5>
-                              <p className="text-xs text-text-secondary flex items-center gap-1 mt-1">
-                                <MapPin className="w-3.5 h-3.5 text-text-secondary" /> {item.calculatedDistance} km away
-                              </p>
-                            </div>
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              item.stock > 0 && item.is_available
-                                ? 'bg-green-50 text-stable'
-                                : 'bg-red-50 text-emergency'
-                            }`}>
-                              {item.stock > 0 && item.is_available ? `In Stock (${item.stock})` : 'Out of Stock'}
-                            </span>
-                          </div>
-
-                          <div className="flex justify-between items-center bg-surface px-3 py-2 rounded-xl border border-border/40 mt-3 mb-4">
-                            <span className="text-xs text-text-secondary">Unit Price:</span>
-                            <span className="text-base font-bold text-medical font-mono">₹{item.price}</span>
-                          </div>
-                        </div>
-
-                        {/* Communication / Action Buttons */}
-                        <div className="flex flex-wrap gap-2">
-                          <a
-                            href={`tel:${item.phone}`}
-                            className="flex-1 min-w-[70px] btn-secondary !h-9 text-xs flex items-center justify-center gap-1.5"
-                            title="Call Store"
-                          >
-                            <Phone className="w-3.5 h-3.5" /> Call
-                          </a>
-                          <a
-                            href={`https://wa.me/${item.phone.replace(/[^0-9]/g, '')}?text=Hi%2C%20do%20you%20have%20${encodeURIComponent(item.medicine_name)}%20available%20in%20stock%20at%20${encodeURIComponent(item.storeName)}%3F`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 min-w-[70px] btn-secondary !h-9 text-xs flex items-center justify-center gap-1.5 border-emerald-500/20 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-50/40"
-                            title="Chat on WhatsApp"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5 text-emerald-500" /> WhatsApp
-                          </a>
-                          <button
-                            disabled={item.stock === 0 || !item.is_available}
-                            onClick={() => setReservedMed({ medName: item.medicine_name, storeName: item.storeName })}
-                            className="w-full btn-primary !h-9 text-xs flex items-center justify-center gap-1.5 disabled:opacity-40"
-                          >
-                            Request Medicine
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
                 )}
-              </div>
-
+              </button>
             </div>
 
-            {/* Right Column: Leaflet Map */}
-            <div className="lg:col-span-2 flex flex-col gap-4">
-              {/* Map Panel Wrapper */}
-              <div className="rounded-2xl h-[450px] lg:h-[650px] relative border border-border shadow-sm overflow-hidden z-0 bg-background">
-                <div ref={mapRef} className="w-full h-full" />
-                <div className="absolute top-4 left-4 z-[1000] flex gap-2">
-                  <div className="card-float px-4 py-2 text-xs font-semibold text-text-primary flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-stable live-dot" />
-                    Belgaum Area Triage Map
-                  </div>
-                  {usingFallback && (
-                    <div className="card-float px-3 py-2 text-xs font-semibold text-urgent border border-amber-500/10 flex items-center gap-1">
-                      <ShieldAlert className="w-3.5 h-3.5" /> Mock Mode Active
+            {/* Medicines Catalog Grid */}
+            {loading ? (
+              <div className="text-center py-12">
+                <span className="w-8 h-8 border-2 border-medical/30 border-t-medical rounded-full animate-spin inline-block mb-3" />
+                <p className="text-xs text-text-secondary">Loading medicine inventory...</p>
+              </div>
+            ) : filteredMedicines.length === 0 ? (
+              <div className="text-center py-12 card border border-border">
+                <ShieldAlert className="w-12 h-12 text-text-muted mx-auto mb-3" />
+                <p className="text-sm font-bold text-text-primary">No medicines found</p>
+                <p className="text-xs text-text-secondary mt-1">Try resetting filters or adjusting search queries.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {filteredMedicines.map((med) => {
+                  const qty = getCardQty(med.id);
+                  const inStock = med.stock > 0;
+                  return (
+                    <div 
+                      key={med.id} 
+                      className={`card p-4 border border-border/60 shadow-sm hover:shadow-md transition-shadow relative flex flex-col justify-between ${
+                        !inStock ? 'opacity-85' : ''
+                      }`}
+                    >
+                      <div>
+                        {/* Image */}
+                        <div className="w-full h-36 rounded-xl bg-surface overflow-hidden mb-3 border border-border/30 relative">
+                          <img 
+                            src={med.image_url || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=200'} 
+                            alt={med.medicine_name}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute top-2 right-2">
+                            {getStockBadge(med.stock)}
+                          </div>
+                        </div>
+
+                        {/* Details */}
+                        <span className="text-[9px] font-bold text-medical uppercase tracking-wider block mb-1">
+                          {med.category}
+                        </span>
+                        <h3 className="font-bold text-text-primary text-base leading-tight mb-1">
+                          {med.medicine_name}
+                        </h3>
+                        <p className="text-xs text-text-secondary line-clamp-2 mb-3">
+                          {med.description || 'No description provided.'}
+                        </p>
+                      </div>
+
+                      {/* Footer buying panel */}
+                      <div className="pt-3 border-t border-border/50">
+                        <div className="flex items-center justify-between mb-3.5">
+                          <span className="text-base font-extrabold text-text-primary font-mono">
+                            ₹{med.price}
+                          </span>
+                          <span className="text-[10px] text-text-secondary font-medium">
+                            Stock: <span className="font-bold font-mono">{med.stock}</span>
+                          </span>
+                        </div>
+
+                        {/* Buy actions */}
+                        {inStock ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between bg-surface rounded-lg p-1 border border-border">
+                              <button
+                                onClick={() => setCardQty(med.id, Math.max(1, qty - 1))}
+                                className="w-7 h-7 rounded-md bg-background hover:bg-surface-blue flex items-center justify-center text-text-secondary"
+                              >
+                                <Minus className="w-3.5 h-3.5" />
+                              </button>
+                              <span className="text-xs font-mono font-bold text-text-primary">
+                                {qty}
+                              </span>
+                              <button
+                                onClick={() => setCardQty(med.id, Math.min(med.stock, qty + 1))}
+                                className="w-7 h-7 rounded-md bg-background hover:bg-surface-blue flex items-center justify-center text-text-secondary"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            <button
+                              onClick={() => handleAddToCart(med)}
+                              className="btn-primary w-full h-9 text-xs font-bold flex items-center justify-center gap-1 bg-medical hover:bg-medical-dark shadow-sm"
+                            >
+                              Add to Cart
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            disabled
+                            className="w-full h-9 rounded-xl bg-border text-text-muted text-xs font-bold cursor-not-allowed"
+                          >
+                            Out of Stock
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
+                  );
+                })}
               </div>
-            </div>
+            )}
           </div>
         )}
 
-        {/* Tab 2: MEDICAL STORE OWNER DASHBOARD */}
-        {activeTab === 'dashboard' && (
-          <div className="card p-6 md:p-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-border/50 pb-6 mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-text-primary">
-                  Store Owner Inventory Console
-                </h3>
-                <p className="text-xs text-text-secondary mt-1">
-                  Select your pharmacy, manage inventory item listings, adjust pricing models, and publish stock updates in real-time.
-                </p>
-                {usingFallback && (
-                  <span className="mt-2 inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-50 text-urgent border border-amber-200/50 text-[10px] font-bold uppercase tracking-wider">
-                    <ShieldAlert className="w-3 h-3" /> Database Offline: Edits Local Only
-                  </span>
-                )}
+        {/* Tab 2: My Orders */}
+        {activeTab === 'my-orders' && (
+          <div className="space-y-6">
+            {orders.length === 0 ? (
+              <div className="text-center py-12 card border border-border">
+                <Package className="w-12 h-12 text-text-muted mx-auto mb-3" />
+                <p className="text-sm font-bold text-text-primary">No orders placed yet</p>
+                <p className="text-xs text-text-secondary mt-1">Browse our pharmacy marketplace to place your first medicine request.</p>
               </div>
-
-              {/* Selector store to manage */}
-              <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-xl border border-border">
-                <Store className="w-4 h-4 text-text-secondary" />
-                <select
-                  value={selectedStoreId}
-                  onChange={(e) => {
-                    setSelectedStoreId(e.target.value);
-                    setShowAddForm(false);
-                    setEditingMedId(null);
-                  }}
-                  className="bg-transparent text-text-primary font-bold text-sm focus:outline-none cursor-pointer"
-                >
-                  {stores.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Dashboard Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              
-              {/* Form Side - Add / Edit Medicine */}
-              <div className="lg:col-span-1">
-                <div className="p-5 rounded-2xl bg-surface border border-border">
-                  <h4 className="font-bold text-text-primary text-base mb-4 flex items-center justify-between">
-                    <span>Manage Inventory</span>
-                    {!showAddForm && (
-                      <button
-                        onClick={() => {
-                          setShowAddForm(true);
-                          setEditingMedId(null);
-                        }}
-                        className="p-1.5 rounded-lg bg-medical-soft text-medical hover:bg-medical hover:text-white transition-all"
-                        title="Add Medicine"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    )}
-                  </h4>
-
-                  {showAddForm ? (
-                    <form onSubmit={handleAddMedicine} className="space-y-4">
+            ) : (
+              <div className="space-y-4">
+                {orders.map((o) => (
+                  <div key={o.id} className="card p-6 border border-border/80 shadow-sm relative overflow-hidden bg-surface/30">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border/50 pb-4 mb-4 gap-2">
                       <div>
-                        <label className="block text-[10px] font-bold text-text-secondary mb-1.5 uppercase tracking-wider">Medicine Name</label>
-                        <input
-                          type="text"
-                          required
-                          value={newMedName}
-                          onChange={(e) => setNewMedName(e.target.value)}
-                          placeholder="e.g. Paracetamol 650"
-                          className="input-field"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[10px] font-bold text-text-secondary mb-1.5 uppercase tracking-wider">Price (₹)</label>
-                          <input
-                            type="number"
-                            required
-                            min="0"
-                            step="0.5"
-                            value={newMedPrice}
-                            onChange={(e) => setNewMedPrice(e.target.value)}
-                            placeholder="Price"
-                            className="input-field"
-                          />
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold font-mono text-text-primary">{o.order_number}</span>
+                          <span className="text-[10px] text-text-secondary font-mono">
+                            {new Date(o.created_at).toLocaleDateString()}
+                          </span>
                         </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-text-secondary mb-1.5 uppercase tracking-wider">Stock Count</label>
-                          <input
-                            type="number"
-                            required
-                            min="0"
-                            value={newMedStock}
-                            onChange={(e) => setNewMedStock(e.target.value)}
-                            placeholder="Stock"
-                            className="input-field"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 py-2">
-                        <input
-                          type="checkbox"
-                          id="new-available"
-                          checked={newMedAvailable}
-                          onChange={(e) => setNewMedAvailable(e.target.checked)}
-                          className="w-4 h-4 text-medical border-border rounded focus:ring-medical"
-                        />
-                        <label htmlFor="new-available" className="text-xs text-text-primary font-semibold select-none">
-                          Mark item as available for search
-                        </label>
+                        <p className="text-[10px] text-text-secondary mt-0.5">
+                          {o.order_items?.length || 0} medicines list
+                        </p>
                       </div>
 
-                      <div className="flex gap-2 pt-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-extrabold font-mono text-text-primary">
+                          ₹{o.total}
+                        </span>
                         <button
-                          type="button"
-                          onClick={() => setShowAddForm(false)}
-                          className="flex-1 btn-secondary"
+                          onClick={() => setActiveBillOrder(o)}
+                          className="px-3.5 py-1.5 rounded-lg bg-medical-soft text-medical hover:bg-medical/15 transition-colors text-[10px] font-bold flex items-center gap-1"
                         >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          className="flex-1 btn-primary"
-                        >
-                          Save Item
+                          <Printer className="w-3.5 h-3.5" /> View Bill
                         </button>
                       </div>
-                    </form>
-                  ) : (
-                    <div className="text-center py-6 text-text-secondary text-sm">
-                      <ShoppingBag className="w-12 h-12 text-text-muted mx-auto mb-3" />
-                      <p>Select a pharmacy, click <span className="font-semibold text-medical inline-flex items-center gap-0.5"><Plus className="w-3.5 h-3.5"/> Add</span>, or edit stock counts in the list directly.</p>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              {/* Table Side - List of medicines in inventory */}
-              <div className="lg:col-span-2">
-                <div className="rounded-2xl border border-border overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-surface border-b border-border text-[10px] font-bold text-text-secondary uppercase tracking-wider">
-                          <th className="py-4 px-6">Medicine Name</th>
-                          <th className="py-4 px-6 text-center">Unit Price</th>
-                          <th className="py-4 px-6 text-center">Stock Level</th>
-                          <th className="py-4 px-6 text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dashboardMedicines.length === 0 ? (
-                          <tr>
-                            <td colSpan={4} className="py-12 text-center text-text-secondary text-sm">
-                              No items in inventory. Add supplies on the left panel.
-                            </td>
-                          </tr>
-                        ) : (
-                          dashboardMedicines.map((m) => (
-                            <tr key={m.id} className="border-b border-border/50 hover:bg-surface-blue/10 transition-colors">
-                              <td className="py-4 px-6">
-                                <div className="font-bold text-text-primary text-sm">{m.medicine_name}</div>
-                                <div className="text-[10px] text-text-muted mt-0.5">
-                                  {m.stock > 0 && m.is_available ? '🟢 Active listing' : '🔴 Out of stock warning'}
-                                </div>
-                              </td>
-                              <td className="py-4 px-6 text-center">
-                                {editingMedId === m.id ? (
-                                  <input
-                                    type="number"
-                                    defaultValue={m.price}
-                                    step="0.5"
-                                    onBlur={(e) => {
-                                      handleUpdatePrice(m.id, parseFloat(e.target.value) || m.price);
-                                      setEditingMedId(null);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        handleUpdatePrice(m.id, parseFloat((e.target as HTMLInputElement).value) || m.price);
-                                        setEditingMedId(null);
-                                      }
-                                    }}
-                                    className="w-16 h-8 text-center text-xs font-mono border border-border bg-background rounded-lg text-text-primary focus:outline-none focus:border-medical"
-                                    autoFocus
-                                  />
-                                ) : (
-                                  <button
-                                    onClick={() => setEditingMedId(m.id)}
-                                    className="font-mono text-sm font-bold text-text-primary hover:text-medical transition-colors"
-                                    title="Click to Edit Price"
-                                  >
-                                    ₹{m.price}
-                                  </button>
-                                )}
-                              </td>
-                              <td className="py-4 px-6 text-center">
-                                <div className="flex items-center justify-center gap-2">
-                                  <button
-                                    onClick={() => handleUpdateStock(m.id, Math.max(0, m.stock - 1))}
-                                    className="w-7 h-7 rounded-lg bg-surface border border-border hover:bg-surface-blue flex items-center justify-center text-text-secondary font-bold text-sm"
-                                  >
-                                    -
-                                  </button>
-                                  <span className="w-10 font-bold font-mono text-text-primary text-sm">
-                                    {m.stock}
-                                  </span>
-                                  <button
-                                    onClick={() => handleUpdateStock(m.id, m.stock + 1)}
-                                    className="w-7 h-7 rounded-lg bg-surface border border-border hover:bg-surface-blue flex items-center justify-center text-text-secondary font-bold text-sm"
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="py-4 px-6 text-center">
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <button
-                                    onClick={() => setEditingMedId(m.id)}
-                                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-text-secondary transition-all"
-                                    title="Edit Price"
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteMedicine(m.id)}
-                                    className="p-1.5 rounded-lg bg-red-50 hover:bg-emergency-soft text-emergency transition-all"
-                                    title="Delete Item"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+                    {/* Progress Tracker */}
+                    <div className="py-2">
+                      <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block mb-3">
+                        Order Status Track: <span className="text-medical font-extrabold">{o.status}</span>
+                      </span>
+
+                      {/* Visual progress bar */}
+                      <div className="grid grid-cols-5 text-center relative max-w-xl">
+                        {/* Horizontal connecting lines */}
+                        <div className="absolute top-3 left-[10%] right-[10%] h-0.5 bg-border -z-10">
+                          <div 
+                            className="h-full bg-medical transition-all duration-500" 
+                            style={{ 
+                              width: o.status === 'Placed' ? '0%' :
+                                     o.status === 'Confirmed' ? '25%' :
+                                     o.status === 'Preparing' ? '50%' :
+                                     o.status === 'Out for Delivery' ? '75%' : '100%'
+                            }}
+                          />
+                        </div>
+
+                        {['Placed', 'Confirmed', 'Preparing', 'Out for Delivery', 'Delivered'].map((step, idx) => {
+                          const isActive = ['Placed', 'Confirmed', 'Preparing', 'Out for Delivery', 'Delivered'].indexOf(o.status) >= idx;
+                          return (
+                            <div key={step} className="flex flex-col items-center">
+                              <div className={`w-6.5 h-6.5 rounded-full border-2 bg-background flex items-center justify-center text-[10px] font-bold transition-all ${
+                                isActive ? 'border-medical text-medical shadow-sm' : 'border-border text-text-muted'
+                              }`}>
+                                {idx + 1}
+                              </div>
+                              <span className={`text-[9px] font-bold mt-1.5 block ${
+                                isActive ? 'text-text-primary' : 'text-text-muted'
+                              }`}>
+                                {step}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
-
-            </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Reservation Confirmation Modal Overlay */}
+      {/* Cart Drawer */}
       <AnimatePresence>
-        {reservedMed && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-6">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="card bg-background max-w-sm w-full p-8 border border-border text-center shadow-card relative overflow-hidden"
+        {showCart && (
+          <div className="fixed inset-0 z-50 overflow-hidden">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCart(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-xs"
+            />
+            {/* Drawer */}
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="absolute right-0 top-0 bottom-0 max-w-md w-full bg-background border-l border-border shadow-2xl flex flex-col justify-between"
             >
-              <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 className="w-9 h-9 text-stable" />
+              {/* Drawer Header */}
+              <div className="p-6 border-b border-border flex items-center justify-between bg-surface/50">
+                <h3 className="font-bold text-text-primary text-lg flex items-center gap-2">
+                  <ShoppingCart className="w-5 h-5 text-medical" /> Shopping Cart
+                </h3>
+                <button 
+                  onClick={() => setShowCart(false)}
+                  className="w-8 h-8 rounded-full hover:bg-surface border border-border flex items-center justify-center text-text-secondary"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <h3 className="text-xl font-bold text-text-primary mb-2">Medicine Reserved!</h3>
-              <p className="text-text-secondary text-sm leading-relaxed mb-6">
-                We have requested <b>{reservedMed.medName}</b> from <b>{reservedMed.storeName}</b>. Show this confirmation screen at the counter to retrieve your items.
-              </p>
-              <button
-                onClick={() => setReservedMed(null)}
-                className="w-full btn-primary h-12 rounded-full font-bold"
-              >
-                Dismiss
-              </button>
+
+              {/* Items List */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {cart.length === 0 ? (
+                  <div className="text-center py-16">
+                    <ShoppingCart className="w-12 h-12 text-text-muted mx-auto mb-3" />
+                    <p className="text-sm font-bold text-text-primary">Your cart is empty</p>
+                    <p className="text-xs text-text-secondary mt-1">Browse the marketplace and add items to your cart.</p>
+                  </div>
+                ) : (
+                  cart.map((item) => (
+                    <div key={item.id} className="p-4 rounded-xl border border-border bg-surface/30 flex items-start justify-between gap-3 shadow-xs">
+                      <div>
+                        <span className="text-[8px] font-bold text-medical uppercase tracking-wider block mb-0.5">{item.category}</span>
+                        <h4 className="font-bold text-text-primary text-xs leading-snug">{item.name}</h4>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="text-xs font-extrabold font-mono text-text-primary">₹{item.price}</span>
+                          <span className="text-[10px] text-text-muted">each</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-2.5">
+                        {/* Quantity editor */}
+                        <div className="flex items-center gap-1.5 bg-background rounded-lg p-0.5 border border-border">
+                          <button
+                            onClick={() => handleUpdateCartQty(item.id, -1)}
+                            className="w-6 h-6 rounded-md hover:bg-surface flex items-center justify-center text-text-secondary text-xs"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="text-xs font-mono font-bold text-text-primary w-5 text-center">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => handleUpdateCartQty(item.id, 1)}
+                            className="w-6 h-6 rounded-md hover:bg-surface flex items-center justify-center text-text-secondary text-xs"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        {/* Remove item */}
+                        <button
+                          onClick={() => handleRemoveFromCart(item.id)}
+                          className="text-[10px] font-bold text-emergency hover:underline flex items-center gap-0.5"
+                        >
+                          <Trash2 className="w-3 h-3" /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Total calculations & Checkout */}
+              {cart.length > 0 && (
+                <div className="p-6 border-t border-border bg-surface/50 space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-text-secondary">
+                      <span>Subtotal</span>
+                      <span className="font-mono font-bold text-text-primary">₹{cartSubtotal}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-text-secondary">
+                      <span>Delivery Fee</span>
+                      <span className="font-mono font-bold text-text-primary">₹{deliveryFee}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm font-bold text-text-primary pt-2 border-t border-border/50">
+                      <span>Grand Total</span>
+                      <span className="font-mono text-base font-extrabold text-medical">₹{cartTotal}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowCart(false);
+                      setShowCheckout(true);
+                    }}
+                    className="btn-primary w-full h-11 text-xs font-bold flex items-center justify-center gap-1 bg-medical hover:bg-medical-dark shadow-md"
+                  >
+                    Proceed to Checkout <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      {/* Checkout Screen Modal */}
+      {showCheckout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-8">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setShowCheckout(false)} />
+          
+          <div className="card max-w-md w-full p-6 border border-border shadow-2xl relative z-10 bg-background overflow-hidden animate-scaleIn">
+            <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2 border-b border-border/60 pb-3">
+              <Package className="w-5.5 h-5.5 text-medical" /> Order Summary Checkout
+            </h3>
+
+            {/* Summary list */}
+            <div className="max-h-48 overflow-y-auto space-y-2.5 mb-4 pr-1">
+              {cart.map((item) => (
+                <div key={item.id} className="flex justify-between text-xs items-start">
+                  <div>
+                    <span className="font-bold text-text-primary">{item.name}</span>
+                    <span className="text-[10px] text-text-secondary ml-1.5">Qty: {item.quantity}</span>
+                  </div>
+                  <span className="font-mono font-bold text-text-primary">₹{item.price * item.quantity}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Subtotal totals block */}
+            <div className="space-y-2 border-t border-border pt-4 mb-5">
+              <div className="flex items-center justify-between text-xs text-text-secondary">
+                <span>Subtotal</span>
+                <span className="font-mono font-bold text-text-primary">₹{cartSubtotal}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-text-secondary">
+                <span>Delivery Charge</span>
+                <span className="font-mono font-bold text-text-primary">₹{deliveryFee}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm font-bold text-text-primary pt-2 border-t border-border/50">
+                <span>Grand Total</span>
+                <span className="font-mono text-base font-extrabold text-medical">₹{cartTotal}</span>
+              </div>
+            </div>
+
+            {/* Submit checkout buttons */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowCheckout(false)}
+                className="flex-1 btn-secondary text-xs font-bold h-11"
+                disabled={isPlacingOrder}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handlePlaceOrder}
+                disabled={isPlacingOrder}
+                className="flex-1 btn-primary text-xs font-bold h-11 flex items-center justify-center gap-1 bg-medical hover:bg-medical-dark"
+              >
+                {isPlacingOrder ? (
+                  <span className="w-4.5 h-4.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>Place Order</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bill / Invoice Receipt display modal */}
+      {activeBillOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-8">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setActiveBillOrder(null)} />
+          
+          <div className="card max-w-md w-full p-6 border border-border shadow-2xl relative z-10 bg-background overflow-hidden animate-scaleIn print:p-0 print:border-none print:shadow-none">
+            
+            {/* Header close button */}
+            <div className="flex justify-between items-center border-b border-border/60 pb-3 mb-4 print:hidden">
+              <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">Pharmacy Invoice Bill</span>
+              <button 
+                onClick={() => setActiveBillOrder(null)}
+                className="w-7 h-7 rounded-full hover:bg-surface border border-border flex items-center justify-center text-text-secondary"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* The printable invoice content */}
+            <div id="print-area" className="font-mono text-xs text-text-primary p-4 border border-dashed border-border rounded-xl bg-surface/10 space-y-4">
+              <div className="text-center border-b border-dashed border-border pb-3">
+                <h2 className="text-sm font-extrabold tracking-widest text-text-primary">RESQ HEALTHCARE</h2>
+                <p className="text-[10px] text-text-secondary mt-0.5">PHARMACY BILL RECEIPT</p>
+              </div>
+
+              <div className="space-y-1 text-[10px] text-text-secondary">
+                <div>Order ID: <span className="font-bold text-text-primary">{activeBillOrder.order_number || activeBillOrder.id}</span></div>
+                <div>Date: <span className="font-bold text-text-primary">{new Date(activeBillOrder.created_at).toLocaleString()}</span></div>
+                <div>Customer: <span className="font-bold text-text-primary">{activeBillOrder.user_email}</span></div>
+                <div>Status: <span className="font-bold text-medical">{activeBillOrder.status}</span></div>
+              </div>
+
+              <div className="border-t border-b border-dashed border-border py-2.5">
+                <table className="w-full text-left text-[10px]">
+                  <thead>
+                    <tr className="font-bold text-text-secondary border-b border-dashed border-border/40 pb-1">
+                      <th className="pb-1">Medicine</th>
+                      <th className="pb-1 text-center">Qty</th>
+                      <th className="pb-1 text-right">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(activeBillOrder.order_items || []).map((item: any, idx: number) => (
+                      <tr key={idx}>
+                        <td className="py-1">{item.medicine_name}</td>
+                        <td className="py-1 text-center">{item.quantity}</td>
+                        <td className="py-1 text-right">₹{item.price * item.quantity}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-1.5 text-right text-[10px] text-text-secondary">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span className="font-bold text-text-primary">₹{activeBillOrder.subtotal}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Delivery Fee:</span>
+                  <span className="font-bold text-text-primary">₹{activeBillOrder.delivery_charge}</span>
+                </div>
+                <div className="flex justify-between text-xs font-bold text-text-primary border-t border-dashed border-border/50 pt-1.5">
+                  <span className="text-medical">TOTAL:</span>
+                  <span className="text-medical font-mono font-extrabold">₹{activeBillOrder.total}</span>
+                </div>
+              </div>
+
+              <div className="text-center border-t border-dashed border-border/80 pt-3 text-[9px] text-text-secondary">
+                Thank you for choosing ResQ Emergency Services.<br/>
+                Get well soon!
+              </div>
+            </div>
+
+            {/* Print and view controls */}
+            <div className="flex gap-2 mt-5 print:hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveBillOrder(null);
+                  setActiveTab('my-orders');
+                }}
+                className="flex-1 btn-secondary text-xs font-bold h-10 flex items-center justify-center gap-1"
+              >
+                <ClipboardList className="w-4 h-4" /> View My Orders
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex-1 btn-primary text-xs font-bold h-10 flex items-center justify-center gap-1 bg-medical hover:bg-medical-dark"
+              >
+                <Printer className="w-4 h-4" /> Print Bill
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
