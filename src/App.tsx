@@ -15,6 +15,7 @@ import AdminPage from '@/pages/AdminPage';
 import UserLoginPage from '@/pages/UserLoginPage';
 import UserDashboardPage from '@/pages/UserDashboardPage';
 import AdminDashboardPage from '@/pages/AdminDashboardPage';
+import VelorahHero from '@/pages/VelorahHero';
 import SOSButton from '@/components/emergency/SOSButton';
 
 export default function App() {
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/login" element={<UserLoginPage />} />
           <Route path="/user-dashboard" element={<UserDashboardPage />} />
           <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
+          <Route path="/velorah" element={<VelorahHero />} />
         </Routes>
         <SOSButton />
       </BrowserRouter>
