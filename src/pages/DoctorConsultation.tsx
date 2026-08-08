@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Video, User, CheckCircle2, AlertCircle, 
   Clock, X, ShieldAlert, PhoneCall, ExternalLink,
-  Copy, Share2 
+  Copy, Share2, MessageSquare, Loader2
 } from 'lucide-react';
-import type { Doctor, Consultation } from '@/types';
+import type { Doctor } from '@/types';
 import { supabase } from '@/lib/supabase';
 import NavigationBar from '@/components/Navigation';
 
@@ -47,10 +47,10 @@ const mockDoctors: Doctor[] = [
 
 export default function DoctorConsultation() {
   const [doctors, setDoctors] = useState<Doctor[]>(mockDoctors);
-  const [patientName, setPatientName] = useState<string>('');
-  const [patientEmail, setPatientEmail] = useState<string>('');
+  const [patientName, setPatientName] = useState<string>(() => localStorage.getItem('resq-active-user-name') || '');
+  const [patientEmail, setPatientEmail] = useState<string>(() => localStorage.getItem('resq-active-user-email') || '');
+  const [symptoms, setSymptoms] = useState<string>('');
   const [loadingDoctorId, setLoadingDoctorId] = useState<string | null>(null);
-  const [emailSentAlert, setEmailSentAlert] = useState<{ email: string; isReal: boolean } | null>(null);
   
   // Track active call in client session
   const [activeConsultation, setActiveConsultation] = useState<{
@@ -58,67 +58,16 @@ export default function DoctorConsultation() {
     doctorId: string;
     doctorName: string;
     meetUrl: string;
+    status: 'pending' | 'accepted' | 'rejected' | 'active' | 'completed';
   } | null>(null);
 
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = () => {
-    if (activeConsultation) {
+    if (activeConsultation && activeConsultation.meetUrl) {
       navigator.clipboard.writeText(activeConsultation.meetUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  // Helper to generate a realistic Google Meet URL if placeholder is detected
-  const getMeetingUrl = (baseMeetUrl: string): string => {
-    const isPlaceholder = ['abc-defg-hij', 'klm-nopq', 'uvw-xyz', '567-890'].some(ph => baseMeetUrl.includes(ph));
-    if (isPlaceholder) {
-      // Generate a standard 3-4-3 google meet code: meet.google.com/xxx-yyyy-zzz
-      const randomPart = () => Math.random().toString(36).substring(2, 6);
-      return `https://meet.google.com/${randomPart().substring(0,3)}-${randomPart().substring(0,4)}-${randomPart().substring(0,3)}`;
-    }
-    return baseMeetUrl;
-  };
-
-  // Helper to send email via EmailJS REST API
-  const sendEmailNotification = async (params: {
-    patientName: string;
-    patientEmail: string;
-    doctorName: string;
-    meetUrl: string;
-  }) => {
-    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
-    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
-    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-
-    if (!serviceId || !templateId || !publicKey) {
-      console.log('EmailJS is not configured in .env. Simulating email delivery.');
-      return false; // Simulated
-    }
-
-    try {
-      const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          service_id: serviceId,
-          template_id: templateId,
-          user_id: publicKey,
-          template_params: {
-            to_name: params.patientName,
-            to_email: params.patientEmail,
-            doctor_name: params.doctorName,
-            meeting_link: params.meetUrl,
-          },
-        }),
-      });
-      return res.ok;
-    } catch (err) {
-      console.error('EmailJS request failed:', err);
-      return false;
     }
   };
 
@@ -161,8 +110,44 @@ export default function DoctorConsultation() {
     }
   };
 
+  // Restore consultation session from localStorage on mount
   useEffect(() => {
     fetchDoctors();
+
+    const activeId = localStorage.getItem('resq-active-consultation-id');
+    if (activeId) {
+      const restoreSession = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('consultations')
+            .select('*')
+            .eq('id', activeId)
+            .single();
+
+          if (!error && data && data.status !== 'completed' && data.status !== 'rejected') {
+            // Find doctor details from database or fallback name
+            let docName = 'Specialist';
+            const { data: docData } = await supabase.from('doctors').select('name').eq('id', data.doctor_id).single();
+            if (docData) docName = docData.name;
+
+            setActiveConsultation({
+              id: data.id,
+              doctorId: data.doctor_id,
+              doctorName: docName,
+              meetUrl: data.meet_link || '',
+              status: data.status
+            });
+            // Subscribe to this active consultation updates
+            subscribeToConsultation(data.id);
+          } else {
+            localStorage.removeItem('resq-active-consultation-id');
+          }
+        } catch (err) {
+          console.warn('Failed to restore active consultation session:', err);
+        }
+      };
+      restoreSession();
+    }
 
     // Subscribe to Realtime status updates for doctors
     const channel = supabase
@@ -198,85 +183,95 @@ export default function DoctorConsultation() {
     };
   }, []);
 
-  // Start Video Consultation
+  // Real-time listener for consultation changes
+  const subscribeToConsultation = (id: string) => {
+    const channel = supabase
+      .channel(`consultation-${id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'consultations', filter: `id=eq.${id}` },
+        (payload) => {
+          console.log('Realtime update for consultation:', payload.new);
+          const updated = payload.new as any;
+          if (updated) {
+            setActiveConsultation(prev => {
+              if (prev && prev.id === updated.id) {
+                return {
+                  ...prev,
+                  status: updated.status,
+                  meetUrl: updated.meet_link || ''
+                };
+              }
+              return prev;
+            });
+            
+            if (updated.status === 'completed' || updated.status === 'rejected') {
+              localStorage.removeItem('resq-active-consultation-id');
+              // Delay removal slightly so user can see rejection alert
+              if (updated.status === 'completed') {
+                setActiveConsultation(null);
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return channel;
+  };
+
+  // Start Consultation request (Patient Side)
   const handleStartConsultation = async (doctor: Doctor) => {
     if (activeConsultation) {
-      alert('You already have an active consultation session. Please end it before starting a new one.');
+      alert('You already have a consultation session. Please end it before starting a new one.');
       return;
     }
     
     setLoadingDoctorId(doctor.id);
     const finalPatientName = patientName.trim() || 'Anonymous Patient';
-    const activeMeetUrl = getMeetingUrl(doctor.meetUrl);
-
-    // Send email notification if email address is provided
-    if (patientEmail.trim()) {
-      const isReal = await sendEmailNotification({
-        patientName: finalPatientName,
-        patientEmail: patientEmail.trim(),
-        doctorName: doctor.name,
-        meetUrl: activeMeetUrl
-      });
-      setEmailSentAlert({
-        email: patientEmail.trim(),
-        isReal
-      });
-      // auto hide email sent alert after 7 seconds
-      setTimeout(() => setEmailSentAlert(null), 7000);
-    }
+    const finalPatientEmail = patientEmail.trim() || 'anonymous@resq.com';
+    const finalSymptoms = symptoms.trim() || 'General video consultation request.';
 
     try {
-      // 1. Create a consultation record in Supabase
+      // 1. Create a consultation record in Supabase with status = 'pending'
       const { data: consultation, error: consultError } = await supabase
         .from('consultations')
         .insert({
           doctor_id: doctor.id,
           patient_name: finalPatientName,
-          status: 'active'
+          patient_email: finalPatientEmail,
+          symptoms: finalSymptoms,
+          status: 'pending'
         })
         .select()
         .single();
 
       if (consultError) throw consultError;
 
-      // 2. Update the doctor status to busy in Supabase
-      const { error: doctorError } = await supabase
-        .from('doctors')
-        .update({ status: 'busy' })
-        .eq('id', doctor.id);
-
-      if (doctorError) throw doctorError;
-
-      // 3. Open the doctor's Google Meet link in a new tab
-      window.open(activeMeetUrl, '_blank');
-
-      // 4. Set local active session state
+      // 2. Set active session states
+      localStorage.setItem('resq-active-consultation-id', consultation.id);
       setActiveConsultation({
         id: consultation.id,
         doctorId: doctor.id,
         doctorName: doctor.name,
-        meetUrl: activeMeetUrl
+        meetUrl: '',
+        status: 'pending'
       });
 
-      // Update state locally for fallback safety
-      setDoctors(prev => 
-        prev.map(d => d.id === doctor.id ? { ...d, status: 'busy' } : d)
-      );
+      // 3. Subscribe to updates for this consultation
+      subscribeToConsultation(consultation.id);
+
+      // 4. Broadcast to admin tab via BroadcastChannel fallback
+      const bc = new BroadcastChannel('resq-consultations');
+      bc.postMessage({
+        type: 'NEW_CONSULTATION',
+        consultation: consultation
+      });
+      bc.close();
 
     } catch (err) {
       console.error('Error starting video consultation:', err);
-      // Mock fallback: allow local testing if offline/db limits hit
-      const tempId = 'mock-consult-' + Math.random().toString(36).substr(2, 9);
-      window.open(activeMeetUrl, '_blank');
-      setActiveConsultation({
-        id: tempId,
-        doctorId: doctor.id,
-        doctorName: doctor.name,
-        meetUrl: activeMeetUrl
-      });
-      setDoctors(prev => 
-        prev.map(d => d.id === doctor.id ? { ...d, status: 'busy' } : d)
-      );
+      alert('Failed to request consultation. Please ensure database tables and RLS are set up.');
     } finally {
       setLoadingDoctorId(null);
     }
@@ -302,29 +297,16 @@ export default function DoctorConsultation() {
         .update({ status: 'available' })
         .eq('id', activeConsultation.doctorId);
 
-      // Update state locally for fallback safety
+      // Update state locally
       setDoctors(prev => 
         prev.map(d => d.id === activeConsultation.doctorId ? { ...d, status: 'available' } : d)
       );
 
     } catch (err) {
       console.error('Error ending consultation:', err);
-      // Mock fallback
-      setDoctors(prev => 
-        prev.map(d => d.id === activeConsultation.doctorId ? { ...d, status: 'available' } : d)
-      );
     } finally {
+      localStorage.removeItem('resq-active-consultation-id');
       setActiveConsultation(null);
-    }
-  };
-
-  const handleResetStatuses = async () => {
-    try {
-      await supabase.from('doctors').update({ status: 'available' });
-      setDoctors(prev => prev.map(d => ({ ...d, status: 'available' })));
-    } catch (err) {
-      console.error('Error resetting statuses:', err);
-      setDoctors(prev => prev.map(d => ({ ...d, status: 'available' })));
     }
   };
 
@@ -355,85 +337,86 @@ export default function DoctorConsultation() {
               initial={{ opacity: 0, scale: 0.95, y: -20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
-              className="card border-emergency/40 bg-emergency-soft/30 p-5 mb-8 flex flex-col xl:flex-row items-center justify-between gap-4 shadow-emergency/10"
+              className={`card p-5 mb-8 flex flex-col xl:flex-row items-center justify-between gap-4 shadow-lg ${
+                activeConsultation.status === 'rejected' ? 'border-red-200 bg-red-50/50' : 
+                activeConsultation.status === 'accepted' || activeConsultation.status === 'active' ? 'border-green-200 bg-green-50/50' : 
+                'border-amber-200 bg-amber-50/50'
+              }`}
             >
               <div className="flex items-center gap-3.5 mr-auto">
-                <div className="w-12 h-12 rounded-full bg-emergency text-white flex items-center justify-center animate-bounce flex-shrink-0">
-                  <PhoneCall className="w-5 h-5" />
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  activeConsultation.status === 'rejected' ? 'bg-red-500 text-white' :
+                  activeConsultation.status === 'accepted' || activeConsultation.status === 'active' ? 'bg-green-500 text-white animate-pulse' :
+                  'bg-amber-500 text-white animate-bounce'
+                }`}>
+                  {activeConsultation.status === 'rejected' ? <X className="w-5 h-5" /> : <PhoneCall className="w-5 h-5" />}
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-text-primary">
-                    Active Video Consultation
+                    {activeConsultation.status === 'rejected' ? 'Consultation Request Rejected' :
+                     activeConsultation.status === 'accepted' || activeConsultation.status === 'active' ? 'Consultation Accepted' :
+                     'Consultation Request Sent'}
                   </h3>
                   <p className="text-sm text-text-secondary">
-                    Consultation session active with <span className="font-semibold text-text-primary">{activeConsultation.doctorName}</span>
-                  </p>
-                  <p className="text-xs text-text-muted mt-0.5 break-all">
-                    Link: <span className="font-mono">{activeConsultation.meetUrl}</span>
+                    {activeConsultation.status === 'rejected' ? `Doctor is currently unavailable. Please choose another doctor.` :
+                     activeConsultation.status === 'accepted' || activeConsultation.status === 'active' ? 'Doctor is ready. Click below to join the video call.' :
+                     `Waiting for ${activeConsultation.doctorName} to accept your request...`}
                   </p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 w-full xl:w-auto justify-end">
-                <button
-                  onClick={handleCopyLink}
-                  className="btn-secondary flex items-center justify-center gap-1.5 text-xs h-10 px-3 border-border/80 text-text-primary bg-background hover:bg-surface"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  {copied ? 'Copied!' : 'Copy Code Link'}
-                </button>
-                <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Here is the Google Meet link to join the video consultation with ${activeConsultation.doctorName}: ${activeConsultation.meetUrl}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-secondary flex items-center justify-center gap-1.5 text-xs h-10 px-3 border-green-300/45 text-stable bg-green-50/50 hover:bg-green-100/60"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  Share on WhatsApp
-                </a>
-                <a
-                  href={activeConsultation.meetUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary flex items-center justify-center gap-1.5 text-xs h-10 px-4 bg-medical hover:bg-medical-dark"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" /> Open Meet
-                </a>
-                <button
-                  onClick={handleEndConsultation}
-                  className="btn-emergency text-xs h-10 px-4"
-                >
-                  End Consultation
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Email Sent Notification Alert */}
-        <AnimatePresence>
-          {emailSentAlert && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className={`p-4 rounded-2xl border text-sm flex items-center gap-2.5 mb-6 max-w-xl mx-auto ${
-                emailSentAlert.isReal
-                  ? 'bg-green-50 border-green-200 text-stable'
-                  : 'bg-blue-50 border-blue-200 text-medical'
-              }`}
-            >
-              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-              <div>
-                <div className="font-bold">
-                  {emailSentAlert.isReal ? 'Email Sent Successfully!' : 'Email Delivery Simulated!'}
-                </div>
-                <div className="text-xs text-text-secondary mt-0.5">
-                  The Google Meet link was sent to <span className="font-semibold text-text-primary">{emailSentAlert.email}</span>.
-                </div>
-                {!emailSentAlert.isReal && (
-                  <div className="text-[10px] text-text-muted mt-1 leading-tight">
-                    ResQ simulated the email send. To dispatch actual emails, configure `VITE_EMAILJS_SERVICE_ID`, `VITE_EMAILJS_TEMPLATE_ID`, and `VITE_EMAILJS_PUBLIC_KEY` in your `.env` file.
+                {activeConsultation.status === 'pending' && (
+                  <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-100/50 px-3 py-1.5 rounded-xl border border-amber-200">
+                    <Loader2 className="w-4.5 h-4.5 animate-spin text-amber-600" />
+                    <span>Awaiting response</span>
                   </div>
+                )}
+
+                {(activeConsultation.status === 'accepted' || activeConsultation.status === 'active') && activeConsultation.meetUrl && (
+                  <>
+                    <button
+                      onClick={handleCopyLink}
+                      className="btn-secondary flex items-center justify-center gap-1.5 text-xs h-10 px-3 border-border/80 text-text-primary bg-background hover:bg-surface"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      {copied ? 'Copied!' : 'Copy Code Link'}
+                    </button>
+                    <a
+                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Here is the Google Meet link to join the video consultation: ${activeConsultation.meetUrl}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-secondary flex items-center justify-center gap-1.5 text-xs h-10 px-3 border-green-300/45 text-stable bg-green-50/50 hover:bg-green-100/60"
+                    >
+                      <Share2 className="w-3.5 h-3.5" /> Share
+                    </a>
+                    <a
+                      href={activeConsultation.meetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-primary flex items-center justify-center gap-1.5 text-xs h-10 px-4 bg-green-600 hover:bg-green-700"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> Join Video Consultation
+                    </a>
+                  </>
+                )}
+
+                {activeConsultation.status === 'rejected' ? (
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('resq-active-consultation-id');
+                      setActiveConsultation(null);
+                    }}
+                    className="btn-secondary text-xs h-10 px-4"
+                  >
+                    Select Another Doctor
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleEndConsultation}
+                    className="btn-emergency text-xs h-10 px-4"
+                  >
+                    Cancel Consultation
+                  </button>
                 )}
               </div>
             </motion.div>
@@ -445,7 +428,7 @@ export default function DoctorConsultation() {
           <h2 className="text-sm font-bold text-text-primary mb-4 flex items-center gap-2">
             <User className="w-4 h-4 text-medical" /> Consultation Patient Profile
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-[10px] font-bold text-text-secondary mb-1.5 uppercase tracking-wider">Patient Name</label>
               <input
@@ -469,11 +452,17 @@ export default function DoctorConsultation() {
               />
             </div>
           </div>
-          {patientEmail.trim() && (
-            <p className="text-[10px] text-text-muted mt-2 text-center">
-              The Google Meet room invite link will be sent to your email address as soon as you start the call.
-            </p>
-          )}
+          <div>
+            <label className="block text-[10px] font-bold text-text-secondary mb-1.5 uppercase tracking-wider">Reason for Consultation / Symptoms</label>
+            <textarea
+              placeholder="Describe your symptoms or medical concern..."
+              value={symptoms}
+              onChange={(e) => setSymptoms(e.target.value)}
+              disabled={!!activeConsultation}
+              rows={3}
+              className="textarea-field text-sm resize-none disabled:bg-surface-blue/10 disabled:cursor-not-allowed"
+            />
+          </div>
         </div>
 
         {/* Doctors Grid */}
@@ -518,7 +507,7 @@ export default function DoctorConsultation() {
                   {/* Specialty details info block */}
                   <div className="mt-5 p-3 rounded-xl bg-surface border border-border/60 text-xs text-text-secondary flex items-center gap-2">
                     <Clock className="w-4 h-4 text-text-muted" />
-                    <span>Average consultation time: 10 - 15 minutes</span>
+                    <span>Average response time: 2 - 5 minutes</span>
                   </div>
                 </div>
 
@@ -531,9 +520,11 @@ export default function DoctorConsultation() {
                     {loadingDoctorId === doctor.id ? (
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
-                      <Video className="w-4 h-4" />
+                      <>
+                        <Video className="w-4 h-4" />
+                        Request Consultation
+                      </>
                     )}
-                    Start Video Consultation
                   </button>
                   <a
                     href={`tel:112`}

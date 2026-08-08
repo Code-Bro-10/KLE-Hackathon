@@ -32,11 +32,21 @@ export default function Navigation() {
     { to: '/consult', label: t('consult'), icon: Video },
     { to: '/pharmacy', label: t('pharmacy'), icon: Store },
     { to: '/rentals', label: t('rentals'), icon: Truck },
-    { to: '/admin', label: t('adminPortal'), icon: UserCheck },
+    { to: '/login', label: 'Login / Portal', icon: UserCheck },
     { to: '/about', label: t('about'), icon: Info },
     { to: '/safety', label: t('safety'), icon: ShieldCheck },
+    { to: '/admin-dashboard', label: 'Admin Dashboard', icon: LayoutDashboard },
     { to: '/dashboard', label: t('hospital'), icon: LayoutDashboard },
   ];
+
+  const userRole = localStorage.getItem('resq-active-user-role') || 'user';
+  const visibleLinks = links.filter(link => {
+    // Hide admin dashboard and hospital capacity portals for non-admin patient accounts
+    if (userRole === 'user') {
+      return !['/admin-dashboard', '/dashboard'].includes(link.to);
+    }
+    return true;
+  });
 
   return (
     <nav className="nav-pill flex items-center gap-1">
@@ -48,7 +58,7 @@ export default function Navigation() {
       </Link>
 
       <div className="hidden md:flex items-center gap-1 mr-2">
-        {links.map((link) => {
+        {visibleLinks.map((link) => {
           const active = location.pathname === link.to;
           return (
             <Link

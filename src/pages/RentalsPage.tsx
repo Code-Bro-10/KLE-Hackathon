@@ -122,6 +122,8 @@ export default function RentalsPage() {
   const [newItemQty, setNewItemQty] = useState('1');
   const [newItemDelivery, setNewItemDelivery] = useState(true);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
+  const [editingDepositId, setEditingDepositId] = useState<string | null>(null);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
@@ -431,6 +433,45 @@ export default function RentalsPage() {
     setShowAddForm(false);
   };
 
+  const handleUpdatePrice = async (id: string, price_per_day: number) => {
+    if (usingFallback) {
+      setEquipment((prev) => prev.map((e) => (e.id === id ? { ...e, price_per_day } : e)));
+    } else {
+      try {
+        await supabase.from('equipment_items').update({ price_per_day }).eq('id', id);
+        loadData();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleUpdateDeposit = async (id: string, deposit: number) => {
+    if (usingFallback) {
+      setEquipment((prev) => prev.map((e) => (e.id === id ? { ...e, deposit } : e)));
+    } else {
+      try {
+        await supabase.from('equipment_items').update({ deposit }).eq('id', id);
+        loadData();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleUpdateQty = async (id: string, quantity_available: number) => {
+    if (usingFallback) {
+      setEquipment((prev) => prev.map((e) => (e.id === id ? { ...e, quantity_available } : e)));
+    } else {
+      try {
+        await supabase.from('equipment_items').update({ quantity_available }).eq('id', id);
+        loadData();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
   const handleDeleteEquipment = async (id: string) => {
     if (usingFallback) {
       setEquipment((prev) => prev.filter((e) => e.id !== id));
@@ -476,28 +517,30 @@ export default function RentalsPage() {
           </p>
 
           {/* Navigation Toggles */}
-          <div className="flex justify-center gap-4 mt-6">
-            <button
-              onClick={() => setActiveTab('search')}
-              className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm ${
-                activeTab === 'search'
-                  ? 'bg-medical text-white'
-                  : 'bg-surface border border-border/60 text-text-secondary hover:bg-surface-blue'
-              }`}
-            >
-              Find Equipment
-            </button>
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm ${
-                activeTab === 'dashboard'
-                  ? 'bg-medical text-white'
-                  : 'bg-surface border border-border/60 text-text-secondary hover:bg-surface-blue'
-              }`}
-            >
-              Vendor Dashboard
-            </button>
-          </div>
+          {localStorage.getItem('resq-active-user-role') !== 'user' && (
+            <div className="flex justify-center gap-4 mt-6">
+              <button
+                onClick={() => setActiveTab('search')}
+                className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm ${
+                  activeTab === 'search'
+                    ? 'bg-medical text-white'
+                    : 'bg-surface border border-border/60 text-text-secondary hover:bg-surface-blue'
+                }`}
+              >
+                Find Equipment
+              </button>
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm ${
+                  activeTab === 'dashboard'
+                    ? 'bg-medical text-white'
+                    : 'bg-surface border border-border/60 text-text-secondary hover:bg-surface-blue'
+                }`}
+              >
+                Vendor Dashboard
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Tab 1: FIND & BOOK */}
@@ -733,6 +776,8 @@ export default function RentalsPage() {
                     setSelectedVendorId(e.target.value);
                     setShowAddForm(false);
                     setEditingItemId(null);
+                    setEditingPriceId(null);
+                    setEditingDepositId(null);
                   }}
                   className="bg-transparent text-text-primary font-bold text-sm focus:outline-none cursor-pointer"
                 >
@@ -944,19 +989,110 @@ export default function RentalsPage() {
                         </tr>
                       ) : (
                         dashboardItems.map((e) => (
-                          <tr key={e.id} className="border-b border-border/40 text-xs">
-                            <td className="py-4 px-6 font-bold text-text-primary">{e.name}</td>
-                            <td className="py-4 px-6 text-center font-mono font-semibold">₹{e.price_per_day}</td>
-                            <td className="py-4 px-6 text-center font-mono">₹{e.deposit}</td>
-                            <td className="py-4 px-6 text-center font-semibold">{e.quantity_available}</td>
+                          <tr key={e.id} className="border-b border-border/50 hover:bg-surface-blue/10 transition-colors text-xs">
+                            <td className="py-4 px-6">
+                              <div className="font-bold text-text-primary text-sm">{e.name}</div>
+                              <div className="text-[10px] text-text-muted mt-0.5">
+                                {e.quantity_available > 0 ? '🟢 Active listing' : '🔴 Out of stock warning'}
+                              </div>
+                            </td>
                             <td className="py-4 px-6 text-center">
-                              <button
-                                onClick={() => handleDeleteEquipment(e.id)}
-                                className="p-1.5 rounded-lg bg-red-50 hover:bg-emergency-soft text-emergency transition-all"
-                                title="Delete Item"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {editingPriceId === e.id ? (
+                                <input
+                                  type="number"
+                                  defaultValue={e.price_per_day}
+                                  step="5"
+                                  onBlur={(evt) => {
+                                    handleUpdatePrice(e.id, parseFloat(evt.target.value) || e.price_per_day);
+                                    setEditingPriceId(null);
+                                  }}
+                                  onKeyDown={(evt) => {
+                                    if (evt.key === 'Enter') {
+                                      handleUpdatePrice(e.id, parseFloat((evt.target as HTMLInputElement).value) || e.price_per_day);
+                                      setEditingPriceId(null);
+                                    }
+                                  }}
+                                  className="w-16 h-8 text-center text-xs font-mono border border-border bg-background rounded-lg text-text-primary focus:outline-none focus:border-medical"
+                                  autoFocus
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => setEditingPriceId(e.id)}
+                                  className="font-mono text-sm font-bold text-text-primary hover:text-medical transition-colors"
+                                  title="Click to Edit Price"
+                                >
+                                  ₹{e.price_per_day}
+                                </button>
+                              )}
+                            </td>
+                            <td className="py-4 px-6 text-center">
+                              {editingDepositId === e.id ? (
+                                <input
+                                  type="number"
+                                  defaultValue={e.deposit}
+                                  step="50"
+                                  onBlur={(evt) => {
+                                    handleUpdateDeposit(e.id, parseFloat(evt.target.value) || e.deposit);
+                                    setEditingDepositId(null);
+                                  }}
+                                  onKeyDown={(evt) => {
+                                    if (evt.key === 'Enter') {
+                                      handleUpdateDeposit(e.id, parseFloat((evt.target as HTMLInputElement).value) || e.deposit);
+                                      setEditingDepositId(null);
+                                    }
+                                  }}
+                                  className="w-16 h-8 text-center text-xs font-mono border border-border bg-background rounded-lg text-text-primary focus:outline-none focus:border-medical"
+                                  autoFocus
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => setEditingDepositId(e.id)}
+                                  className="font-mono text-sm font-bold text-text-primary hover:text-medical transition-colors"
+                                  title="Click to Edit Deposit"
+                                >
+                                  ₹{e.deposit}
+                                </button>
+                              )}
+                            </td>
+                            <td className="py-4 px-6 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => handleUpdateQty(e.id, Math.max(0, e.quantity_available - 1))}
+                                  className="w-7 h-7 rounded-lg bg-surface border border-border hover:bg-surface-blue flex items-center justify-center text-text-secondary font-bold text-sm"
+                                >
+                                  -
+                                </button>
+                                <span className="w-10 font-bold font-mono text-text-primary text-sm">
+                                  {e.quantity_available}
+                                </span>
+                                <button
+                                  onClick={() => handleUpdateQty(e.id, e.quantity_available + 1)}
+                                  className="w-7 h-7 rounded-lg bg-surface border border-border hover:bg-surface-blue flex items-center justify-center text-text-secondary font-bold text-sm"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </td>
+                            <td className="py-4 px-6 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    setEditingPriceId(e.id);
+                                    setEditingDepositId(e.id);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-text-secondary transition-all"
+                                  title="Edit Item Info"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteEquipment(e.id)}
+                                  className="p-1.5 rounded-lg bg-red-50 hover:bg-emergency-soft text-emergency transition-all"
+                                  title="Delete Item"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))

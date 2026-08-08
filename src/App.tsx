@@ -12,6 +12,9 @@ import VoiceHealthAnalysis from '@/pages/VoiceHealthAnalysis';
 import PharmacyPage from '@/pages/PharmacyPage';
 import RentalsPage from '@/pages/RentalsPage';
 import AdminPage from '@/pages/AdminPage';
+import UserLoginPage from '@/pages/UserLoginPage';
+import UserDashboardPage from '@/pages/UserDashboardPage';
+import AdminDashboardPage from '@/pages/AdminDashboardPage';
 import SOSButton from '@/components/emergency/SOSButton';
 
 export default function App() {
@@ -31,6 +34,9 @@ export default function App() {
           <Route path="/pharmacy" element={<PharmacyPage />} />
           <Route path="/rentals" element={<RentalsPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/login" element={<UserLoginPage />} />
+          <Route path="/user-dashboard" element={<UserDashboardPage />} />
+          <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
         </Routes>
         <SOSButton />
       </BrowserRouter>

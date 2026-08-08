@@ -392,28 +392,30 @@ export default function PharmacyPage() {
           </p>
 
           {/* Navigation/Toggles Tabs */}
-          <div className="flex justify-center gap-4 mt-6">
-            <button
-              onClick={() => setActiveTab('search')}
-              className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm ${
-                activeTab === 'search'
-                  ? 'bg-medical text-white'
-                  : 'bg-surface border border-border/60 text-text-secondary hover:bg-surface-blue'
-              }`}
-            >
-              Search Medicines
-            </button>
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm ${
-                activeTab === 'dashboard'
-                  ? 'bg-medical text-white'
-                  : 'bg-surface border border-border/60 text-text-secondary hover:bg-surface-blue'
-              }`}
-            >
-              Store Owner Dashboard
-            </button>
-          </div>
+          {localStorage.getItem('resq-active-user-role') !== 'user' && (
+            <div className="flex justify-center gap-4 mt-6">
+              <button
+                onClick={() => setActiveTab('search')}
+                className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm ${
+                  activeTab === 'search'
+                    ? 'bg-medical text-white'
+                    : 'bg-surface border border-border/60 text-text-secondary hover:bg-surface-blue'
+                }`}
+              >
+                Search Medicines
+              </button>
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-sm ${
+                  activeTab === 'dashboard'
+                    ? 'bg-medical text-white'
+                    : 'bg-surface border border-border/60 text-text-secondary hover:bg-surface-blue'
+                }`}
+              >
+                Store Owner Dashboard
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Tab 1: SEARCH & DISCOVERY */}

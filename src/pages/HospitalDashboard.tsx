@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Activity, Clock, AlertCircle, CheckCircle2, BedDouble, Phone, Search, Filter, TrendingUp, ArrowRight } from 'lucide-react';
@@ -24,6 +24,14 @@ const statusConfig = {
 export default function HospitalDashboard() {
   const { cases, hospitals, loadCases } = useStore();
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    const userRole = localStorage.getItem('resq-active-user-role') || 'user';
+    if (userRole === 'user') {
+      navigate('/user-dashboard');
+    }
+  }, [navigate]);
+
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'critical' | 'urgent' | 'moderate' | 'lower'>('all');
 

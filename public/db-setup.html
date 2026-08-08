@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ResQ – Fix Database</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', monospace; background: #0f172a; color: #94a3b8; padding: 2rem; min-height: 100vh; }
+  h1 { color: #38bdf8; font-size: 1.5rem; margin-bottom: 0.5rem; }
+  p { font-size: 0.9rem; margin-bottom: 1.5rem; color: #64748b; }
+  pre {
+    background: #1e293b; padding: 1.25rem; border-radius: 12px;
+    overflow-x: auto; white-space: pre-wrap; font-size: 0.8rem;
+    line-height: 1.6; max-height: 400px; overflow-y: auto;
+    border: 1px solid #334155;
+  }
+  .btn {
+    display: inline-block; padding: 0.75rem 2rem; border-radius: 10px;
+    font-size: 0.95rem; cursor: pointer; border: none; font-weight: 600;
+    margin-right: 0.75rem; margin-bottom: 1rem; transition: all 0.2s;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-primary { background: #0ea5e9; color: white; }
+  .btn-green { background: #16a34a; color: white; }
+  .ok { color: #4ade80; }
+  .err { color: #f87171; }
+  .warn { color: #facc15; }
+  .info { color: #60a5fa; }
+  .step { color: #a78bfa; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>🏥 ResQ – One-Click Database Fix</h1>
+<p>Fixes doctor statuses + creates the appointments table automatically.</p>
+
+<button class="btn btn-primary" id="fixBtn" onclick="runFix()">⚡ Fix Everything Now</button>
+<button class="btn btn-green" id="checkBtn" onclick="checkStatus()">🔍 Check Status</button>
+
+<pre id="log">Click "Fix Everything Now" to start...\n</pre>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const supabase = createClient(
+  'https://iderhuahuqbffhzjkpfa.supabase.co',
+  'sb_publishable_sgULEDGz9GUr9SHSQekrLQ_9E6gCJAJ'
+);
+
+const logEl = document.getElementById('log');
+
+function L(msg, type = 'info') {
+  const span = document.createElement('span');
+  span.className = type;
+  span.textContent = msg + '\n';
+  logEl.appendChild(span);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+window.checkStatus = async function() {
+  logEl.textContent = '';
+  L('=== Current Supabase Status ===\n', 'step');
+
+  // Check doctors
+  const { data: docs, error: de } = await supabase.from('doctors').select('name,status');
+  if (de) { L('✗ doctors table error: ' + de.message, 'err'); }
+  else {
+    L(`✓ doctors table: ${docs.length} doctors`, 'ok');
+    docs.forEach(d => {
+      const icon = d.status === 'available' ? '🟢' : d.status === 'busy' ? '🔴' : '⚫';
+      L(`  ${icon} ${d.name} → ${d.status}`, d.status === 'available' ? 'ok' : 'warn');
+    });
+  }
+
+  // Check appointments
+  const { data: apts, error: ae } = await supabase.from('appointments').select('id').limit(1);
+  if (ae) L('✗ appointments table: MISSING (needs SQL run)', 'err');
+  else L('✓ appointments table: exists', 'ok');
+};
+
+window.runFix = async function() {
+  logEl.textContent = '';
+  document.getElementById('fixBtn').disabled = true;
+
+  L('=== ResQ Database Fix ===\n', 'step');
+
+  // STEP 1: Fix all doctor statuses to available
+  L('[1/3] Resetting all doctors to "available"...', 'step');
+  const doctorIds = [
+    '74306915-d652-47fa-8604-ceecf9970dea',
+    'a6427afd-c35c-4f2e-9318-3dd84668a70f',
+    '61c9fb76-4f1a-4297-a2f3-54c3002d892b',
+    'b3f728bb-214a-479a-8e19-7176e39d7f5c',
+    '0f8fee9b-0fef-4028-863a-3b42d742d978'
+  ];
+  
+  // Update each doctor individually (anon key can't do bulk update without filter)
+  let fixedCount = 0;
+  for (const id of doctorIds) {
+    const { error } = await supabase
+      .from('doctors')
+      .update({ status: 'available' })
+      .eq('id', id);
+    if (!error) fixedCount++;
+    else L(`  ⚠ Could not update ${id}: ${error.message}`, 'warn');
+  }
+  
+  // Also try a blanket update
+  const { data: allDocs, error: bulkErr } = await supabase
+    .from('doctors')
+    .update({ status: 'available' })
+    .in('status', ['busy', 'offline'])
+    .select('name, status');
+
+  if (!bulkErr && allDocs) {
+    L(`  ✓ Reset ${allDocs.length} doctors to available!`, 'ok');
+  } else {
+    L(`  ✓ Attempted individual updates for ${fixedCount} doctors`, 'ok');
+  }
+
+  // Verify
+  const { data: verifyDocs } = await supabase.from('doctors').select('name, status');
+  if (verifyDocs) {
+    verifyDocs.forEach(d => {
+      L(`  ${d.status === 'available' ? '🟢' : '🔴'} ${d.name} → ${d.status}`, d.status === 'available' ? 'ok' : 'warn');
+    });
+  }
+
+  // STEP 2: Check appointments table
+  L('\n[2/3] Checking appointments table...', 'step');
+  const { error: apptErr } = await supabase.from('appointments').select('id').limit(1);
+  
+  if (apptErr && apptErr.message.includes('does not exist')) {
+    L('  ✗ appointments table does not exist!', 'err');
+    L('  → You need to run SQL in Supabase dashboard.', 'warn');
+    L('  → NOTE: The feature still works in same browser via BroadcastChannel!', 'info');
+    L('\n  To fix permanently, go to:', 'warn');
+    L('  https://supabase.com/dashboard/project/iderhuahuqbffhzjkpfa/sql/new', 'ok');
+    L('  And paste the SQL shown below:\n', 'warn');
+    L(`CREATE TABLE IF NOT EXISTS appointments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id text NOT NULL DEFAULT '',
+  doctor_id uuid REFERENCES doctors(id) ON DELETE CASCADE NOT NULL,
+  patient_name text NOT NULL DEFAULT 'Anonymous Patient',
+  patient_email text NOT NULL DEFAULT '',
+  symptoms text NOT NULL DEFAULT '',
+  status text NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending','accepted','rejected')),
+  meeting_link text DEFAULT '',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "ap_sel" ON appointments FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "ap_ins" ON appointments FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "ap_upd" ON appointments FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "ap_del" ON appointments FOR DELETE TO anon, authenticated USING (true);
+DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE appointments; EXCEPTION WHEN others THEN NULL; END; $$;`, 'warn');
+  } else if (!apptErr) {
+    L('  ✓ appointments table already exists!', 'ok');
+  }
+
+  // STEP 3: Done
+  L('\n[3/3] Done! ✅', 'step');
+  L('\nWhat to do next:', 'info');
+  L('1. Close this tab', 'ok');
+  L('2. Open Tab 1: http://localhost:5173/doctor-consultation', 'ok');
+  L('3. Open Tab 2: http://localhost:5173/admin-dashboard', 'ok');
+  L('4. In Tab 1: pick a doctor → fill name → click Request Consultation', 'ok');
+  L('5. Watch Tab 2: notification popup will appear instantly!', 'ok');
+
+  document.getElementById('fixBtn').disabled = false;
+  document.getElementById('fixBtn').textContent = '✓ Fixed! Run Again';
+};
+
+// Auto-check on load
+window.addEventListener('load', () => setTimeout(checkStatus, 500));
+</script>
+</body>
+</html>
